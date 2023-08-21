@@ -1,0 +1,27 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "viettel-post"
+client_id = "0a9ac768912fd0b8af52b7dd3e7e1e88"
+application_url = "https://mazda-nights-dear-coffee.trycloudflare.com"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_orders,write_orders,read_customers"
+
+[auth]
+redirect_urls = [
+  "https://mazda-nights-dear-coffee.trycloudflare.com/auth/callback",
+  "https://mazda-nights-dear-coffee.trycloudflare.com/auth/shopify/callback",
+  "https://mazda-nights-dear-coffee.trycloudflare.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2023-07"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "dangkhoa252001.myshopify.com"
