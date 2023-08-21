@@ -196,6 +196,7 @@ export default function Index() {
           a6: `https://digitalize.viettelpost.vn/DigitalizePrint/report.do?type=2&bill=${actionData?.print?.message}&showPostage=1`,
           a7: `https://digitalize.viettelpost.vn/DigitalizePrint/report.do?type=100&bill=${actionData?.print?.message}&showPostage=1`,
         });
+        handleOpenModal();
       }
     }
     if (actionData === "no token") {
@@ -208,7 +209,7 @@ export default function Index() {
   }, [ordersV]);
   useEffect(() => {
     console.log("data have link print: =>", linkPrintV);
-    handleOpenModal();
+    // handleOpenModal();
   }, [linkPrintV]);
 
   function convertUTCToVietnamTime(utcTimeString) {
