@@ -7,6 +7,7 @@ import {
   Card,
   ButtonGroup,
   Text,
+  Spinner,
 } from "@shopify/polaris";
 import { useEffect, useState, useCallback } from "react";
 
@@ -44,7 +45,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [token, setToken] = useState("");
   const [failMes, setFailMes] = useState("");
 
   const loginResponse = useActionData();
@@ -54,7 +54,6 @@ export default function Login() {
     if (loginResponse?.error) {
       setFailMes(loginResponse?.message);
     } else {
-      console.log("loginpageokeeeee=>", loginResponse);
       localStorage.setItem("token", loginResponse?.data?.token);
       localStorage.setItem("phoneNumber", loginResponse?.data?.phone);
       setFailMes("");
@@ -117,9 +116,14 @@ export default function Login() {
               )}
 
               <ButtonGroup>
-                <Button submit textAlign="center" destructive>
-                  Đăng Nhập
+                <Button
+                  submit
+                  textAlign="center"
+                  destructive
+                >
+                  Đăng Nhập 
                 </Button>
+
                 <Button
                   plain
                   url="https://id.viettelpost.vn/Account/Register"
