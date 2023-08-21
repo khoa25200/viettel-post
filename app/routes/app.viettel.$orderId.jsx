@@ -391,7 +391,7 @@ export default function CreateViettelPost() {
       value: (4).toString(),
     },
   ]);
-  const [selectedCollection, setSelectedCollection] = useState("1");
+  const [selectedCollection, setSelectedCollection] = useState("3");
 
   const [valueProductType, setValueProductType] = useState("buukien");
 
@@ -649,74 +649,74 @@ export default function CreateViettelPost() {
     setTotalWeight(totalWeight);
     setTotalPrice(totalPrice);
   }, [listProductsItem]);
-  console.log("date post==>", {
-    ORDER_NUMBER: params.orderId,
-    GROUPADDRESS_ID: 0,
-    CUS_ID: "",
-    DELIVERY_DATE: formatDateTime(new Date()),
-    SENDER_FULLNAME: senderName,
-    SENDER_ADDRESS: `${senderSoNha ? senderSoNha + "," : ""} ${
-      optionsWardSender?.find((w) => w?.value == selectedWardSender)?.label ||
-      ""
-    }, ${
-      optionsDistrictSender?.find((dis) => dis?.value == selectedDistrictSender)
-        ?.label || ""
-    }, ${
-      optionsProvince.find((value) => value.value == selectedProvinceSender)
-        .label || ""
-    }`,
-    SENDER_PHONE: senderPhone,
-    SENDER_EMAIL: senderEmail,
-    SENDER_DISTRICT: selectedDistrictSender,
-    SENDER_PROVINCE: selectedProvinceSender,
-    SENDER_WARD: selectedWardSender,
-    SENDER_LATITUDE: 0,
-    SENDER_LONGITUDE: 0,
-    RECEIVER_FULLNAME: receiveName,
-    RECEIVER_ADDRESS: `${receiveSoNha ? receiveSoNha + "," : ""} ${
-      optionsWardReceive?.find((w) => w?.value == selectedWardReceive)?.label ||
-      ""
-    }, ${
-      optionsDistrictReceive?.find(
-        (dis) => dis?.value == selectedDistrictReceive
-      )?.label || ""
-    }, ${
-      optionsProvince.find((value) => value.value == selectedProvinceReceive)
-        .label || ""
-    }`,
-    RECEIVER_PHONE: receivePhone,
-    RECEIVER_EMAIL: receiveEmail,
-    RECEIVER_PROVINCE: selectedProvinceReceive,
-    RECEIVER_DISTRICT: selectedDistrictReceive,
-    RECEIVER_WARDS: selectedWardReceive,
-    RECEIVER_LATITUDE: 0,
-    RECEIVER_LONGITUDE: 0,
-    EXPECTED_DELIVERY_DATE: formatDate(selectedDates.end),
-    PRODUCT_NAME: productMainName,
-    PRODUCT_DESCRIPTION: productMainDes,
-    PRODUCT_QUANTITY: totalQuantity,
-    PRODUCT_PRICE: totalPrice,
-    PRODUCT_WEIGHT: totalWeight,
-    PRODUCT_LENGTH: 0,
-    PRODUCT_WIDTH: 0,
-    PRODUCT_HEIGHT: 0,
-    PRODUCT_TYPE: valueProductType === "tailieu" ? "TH" : "HH",
-    ORDER_PAYMENT: selectedCollection,
-    ORDER_SERVICE: "VCBO",
-    ORDER_SERVICE_ADD: "",
-    ORDER_VOUCHER: "",
-    ORDER_NOTE: productMainNote,
-    MONEY_COLLECTION: productCollectionPrice,
-    CHECK_UNIQUE: true,
-    LIST_ITEM: listProductsItem.map((value) => {
-      return {
-        PRODUCT_NAME: value.name,
-        PRODUCT_PRICE: value.price,
-        PRODUCT_WEIGHT: value.weight,
-        PRODUCT_QUANTITY: value.quan,
-      };
-    }),
-  });
+  // console.log("date post==>", {
+  //   ORDER_NUMBER: params.orderId,
+  //   GROUPADDRESS_ID: 0,
+  //   CUS_ID: "",
+  //   DELIVERY_DATE: formatDateTime(new Date()),
+  //   SENDER_FULLNAME: senderName,
+  //   SENDER_ADDRESS: `${senderSoNha ? senderSoNha + "," : ""} ${
+  //     optionsWardSender?.find((w) => w?.value == selectedWardSender)?.label ||
+  //     ""
+  //   }, ${
+  //     optionsDistrictSender?.find((dis) => dis?.value == selectedDistrictSender)
+  //       ?.label || ""
+  //   }, ${
+  //     optionsProvince.find((value) => value.value == selectedProvinceSender)
+  //       .label || ""
+  //   }`,
+  //   SENDER_PHONE: senderPhone,
+  //   SENDER_EMAIL: senderEmail,
+  //   SENDER_DISTRICT: selectedDistrictSender,
+  //   SENDER_PROVINCE: selectedProvinceSender,
+  //   SENDER_WARD: selectedWardSender,
+  //   SENDER_LATITUDE: 0,
+  //   SENDER_LONGITUDE: 0,
+  //   RECEIVER_FULLNAME: receiveName,
+  //   RECEIVER_ADDRESS: `${receiveSoNha ? receiveSoNha + "," : ""} ${
+  //     optionsWardReceive?.find((w) => w?.value == selectedWardReceive)?.label ||
+  //     ""
+  //   }, ${
+  //     optionsDistrictReceive?.find(
+  //       (dis) => dis?.value == selectedDistrictReceive
+  //     )?.label || ""
+  //   }, ${
+  //     optionsProvince.find((value) => value.value == selectedProvinceReceive)
+  //       .label || ""
+  //   }`,
+  //   RECEIVER_PHONE: receivePhone,
+  //   RECEIVER_EMAIL: receiveEmail,
+  //   RECEIVER_PROVINCE: selectedProvinceReceive,
+  //   RECEIVER_DISTRICT: selectedDistrictReceive,
+  //   RECEIVER_WARDS: selectedWardReceive,
+  //   RECEIVER_LATITUDE: 0,
+  //   RECEIVER_LONGITUDE: 0,
+  //   EXPECTED_DELIVERY_DATE: formatDate(selectedDates.end),
+  //   PRODUCT_NAME: productMainName,
+  //   PRODUCT_DESCRIPTION: productMainDes,
+  //   PRODUCT_QUANTITY: totalQuantity,
+  //   PRODUCT_PRICE: totalPrice,
+  //   PRODUCT_WEIGHT: totalWeight,
+  //   PRODUCT_LENGTH: 0,
+  //   PRODUCT_WIDTH: 0,
+  //   PRODUCT_HEIGHT: 0,
+  //   PRODUCT_TYPE: valueProductType === "tailieu" ? "TH" : "HH",
+  //   ORDER_PAYMENT: selectedCollection,
+  //   ORDER_SERVICE: "VCBO",
+  //   ORDER_SERVICE_ADD: "",
+  //   ORDER_VOUCHER: "",
+  //   ORDER_NOTE: productMainNote,
+  //   MONEY_COLLECTION: productCollectionPrice,
+  //   CHECK_UNIQUE: true,
+  //   LIST_ITEM: listProductsItem.map((value) => {
+  //     return {
+  //       PRODUCT_NAME: value.name,
+  //       PRODUCT_PRICE: value.price,
+  //       PRODUCT_WEIGHT: value.weight,
+  //       PRODUCT_QUANTITY: value.quan,
+  //     };
+  //   }),
+  // });
   return (
     <Page>
       <Layout>
