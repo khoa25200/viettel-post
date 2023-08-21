@@ -2,7 +2,7 @@
 
 name = "viettel-post"
 client_id = "0a9ac768912fd0b8af52b7dd3e7e1e88"
-application_url = "https://mazda-nights-dear-coffee.trycloudflare.com"
+application_url = "https://warren-walks-finds-complicated.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -11,9 +11,9 @@ scopes = "read_orders,write_orders,read_customers"
 
 [auth]
 redirect_urls = [
-  "https://mazda-nights-dear-coffee.trycloudflare.com/auth/callback",
-  "https://mazda-nights-dear-coffee.trycloudflare.com/auth/shopify/callback",
-  "https://mazda-nights-dear-coffee.trycloudflare.com/api/auth/callback"
+  "https://warren-walks-finds-complicated.trycloudflare.com/auth/callback",
+  "https://warren-walks-finds-complicated.trycloudflare.com/auth/shopify/callback",
+  "https://warren-walks-finds-complicated.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
