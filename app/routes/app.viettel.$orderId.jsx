@@ -48,9 +48,17 @@ export const loader = async ({ request, params }) => {
           phone
           email
           customer {
+            id
             displayName
             firstName
             lastName
+            phone
+            email
+            defaultAddress{
+              address1
+              address2
+              phone
+            }
           }
         }
       }`
@@ -419,7 +427,8 @@ export default function CreateViettelPost() {
     shopOrdersData.order?.customer?.displayName || ""
   );
   const [receivePhone, setReceivePhone] = useState(
-    shopOrdersData.order?.customer?.phone || ""
+    shopOrdersData.order?.customer?.phone || shopOrdersData.order?.customer?.defaultAddress
+    ?.phone || ""
   );
 
   const provinceData = shopOrdersData.provinceResponse;
@@ -1004,6 +1013,22 @@ export default function CreateViettelPost() {
                       }}
                       autoComplete="off"
                     />
+                    <Card>
+                      <Text variant="headingMd" as="h6">
+                        Thông tin khách hàng trong Shopify:
+                      </Text>
+                      ➭<b>Tên người nhận:</b> {shopOrdersData.order?.customer?.displayName || "_"}
+                      <br />
+                      ➭<b>Sđt:</b> {shopOrdersData.order?.customer?.phone || shopOrdersData.order?.customer?.defaultAddress
+                        ?.phone || "_"}
+                      <br />
+                      ➭<b>email:</b>{" "}
+                      {shopOrdersData.order?.customer?.email || "_"}
+                      <br />
+                      ➭<b>Địa chỉ:</b>{" "}
+                      {shopOrdersData.order?.customer?.defaultAddress
+                        ?.address1 || "?"}
+                    </Card>
                   </FormLayout.Group>
                   <Card>
                     <FormLayout.Group>
