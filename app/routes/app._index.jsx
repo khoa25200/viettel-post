@@ -88,7 +88,7 @@ export async function action({ request }) {
         `#graphql
         query {
           orders(first: 100, query:
-"updated_at:>2023-08-01") {
+"name:>1400") {
             edges {
               node {
                 note
@@ -117,7 +117,7 @@ export async function action({ request }) {
       );
       const responseJson = await response.json();
       return json({
-        orders: responseJson.data.orders.edges.map((edge) => edge.node),
+        orders: responseJson.data.orders.edges.map((edge) => edge.node).reverse(),
       });
     } else if (_action === orderVIdPrint && orderVIdPrint && token) {
       const getFutureTimestamp = (minutes) => {
