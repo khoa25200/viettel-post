@@ -833,13 +833,14 @@ export default function CreateViettelPost() {
               <input type="hidden" name="_action" value={actionForm} />
               <input type="hidden" name="token" value={token} />
               <FormLayout>
-                <a
-                  style={{ textDecoration: "none" }}
-                  href={`https://admin.shopify.com/store/${shopOrdersData.shop}/orders/${orderId}`}
+                <Button
+                  plain
+                  textAlign="left"
+                  url={`https://admin.shopify.com/store/${shopOrdersData.shop}/orders/${orderId}`}
                   target="_blank"
                 >
                   Edit order: #{orderId} --- Name: {shopOrdersData.order.name}📝
-                </a>
+                </Button>
                 <TextField
                   label="Shopify Order .No:"
                   value={`#${params.orderId}`}
