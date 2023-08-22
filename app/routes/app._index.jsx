@@ -26,6 +26,7 @@ import {
   Loading,
   ButtonGroup,
   TextContainer,
+  Spinner,
 } from "@shopify/polaris";
 
 import { authenticate } from "../shopify.server";
@@ -167,6 +168,8 @@ export default function Index() {
 
   const [ordersV, setOrdersV] = useState({});
   const [linkPrintV, setLinkPrintV] = useState({});
+  const [isLoadingReload, setIsLoadingReload] = useState(false);
+  const [isLoadingPrint, setIsLoadingPrint] = useState(false);
   const nav = useNavigation();
   const navigate = useNavigate();
 
@@ -181,6 +184,7 @@ export default function Index() {
     if (actionData?.orders) {
       setOrders(actionData?.orders);
       console.log("khoa==>", orders);
+      setIsLoadingReload(false);
     }
     if (actionData?.print) {
       if (actionData?.print.error === true) {
@@ -190,6 +194,7 @@ export default function Index() {
           alert(actionData?.print?.message);
         }
       } else {
+        setIsLoadingPrint(false)
         setLinkPrintV({
           orderVId: actionData?.orderVId,
           a5: `https://digitalize.viettelpost.vn/DigitalizePrint/report.do?type=1&bill=${actionData?.print?.message}&showPostage=1`,
@@ -239,6 +244,7 @@ export default function Index() {
           <Layout.Section>
             <Form method="post">
               <input type="hidden" name="_action" value={actionForm} readOnly />
+              {/* <button>Hi</button> */}
               <input
                 type="hidden"
                 name="orderVIdPrint"
@@ -246,14 +252,18 @@ export default function Index() {
                 readOnly
               />
               <input type="hidden" name="token" value={token} readOnly />
-              {/* <button
+              <Button
+                loading={isLoadingReload}
+                submit
                 onClick={() => {
+                  setIsLoadingReload(true);
                   setActionForm("RELOAD_DATA");
                 }}
               >
                 Reload Data
-              </button> */}
-
+              </Button>
+              <br />
+              <br />
               {/* <button
                 onClick={() => {
                   alert("hi");
@@ -311,14 +321,17 @@ export default function Index() {
                           </button>
                         </Link>
                         <button
+                        // loading={isLoadingPrint}
+                          // submit
                           disabled={order?.metafield?.value ? false : true}
                           onClick={() => {
+                            setIsLoadingPrint(true)
                             setToken(localStorage.getItem("token") || "");
                             setOrderVIdPrint(order?.metafield?.value);
                             setActionForm(order?.metafield?.value);
                           }}
                         >
-                          🖨️In
+                          🖨️In 
                         </button>
                       </>,
                     ]) || []

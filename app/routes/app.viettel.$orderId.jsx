@@ -67,11 +67,23 @@ export const loader = async ({ request, params }) => {
       },
     }
   );
-
+  // const listInventoryRes = await axios.get(
+  //   "https://partner.viettelpost.vn/v2/user/listInventory",
+  //   {
+  //     headers: {
+  //       token:
+  //         "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwOTE4NDE0ODQ4IiwiVXNlcklkIjo2NzMyMTMyLCJGcm9tU291cmNlIjo1LCJUb2tlbiI6IkVRUkVRSVpNWkhLVFVYTDgiLCJleHAiOjE2OTI3NTMxOTAsIlBhcnRuZXIiOjY3MzIxMzJ9.5PvNqhS1Kq-7IcP8hlS2k9d_8ci4M76ADzn99hF_pe2fUph6SWGne611dKhttTtX5h3phob_FI-QXaUwaiDCYA",
+  //       // "Accept": "application/json, text/plain, */*",
+  //       accept: "*/*",
+  //       Authorization: `Bearer ${process.env.API_TOKEN}`,
+  //     },
+  //   }
+  // );
   return json({
     order: responseJson?.data?.order,
     shop: session?.shop?.replace(".myshopify.com", ""),
     provinceResponse: provinceRes?.data,
+    // listIventory: listInventoryRes?.data,
   });
 };
 
@@ -81,7 +93,12 @@ export async function action({ request, params }) {
   if (token) {
     // get from form data
     const _action = body.get("_action");
+    let inventory = body.get("inventory");
+    if (inventory !== "Nhập thủ công") {
+      inventory = JSON.parse(inventory);
+    }
     const senderName = body.get("senderName");
+
     const senderPhone = body.get("senderPhone");
     const senderEmail = body.get("senderEmail");
     const senderDistrict = body.get("senderDistrict");
@@ -117,8 +134,14 @@ export async function action({ request, params }) {
       const responseServiceList = await axios.post(
         `https://partner.viettelpost.vn/v2/order/getPriceAll`,
         {
-          SENDER_DISTRICT: senderDistrict,
-          SENDER_PROVINCE: senderProvince,
+          SENDER_DISTRICT:
+            inventory === "Nhập thủ công"
+              ? senderDistrict
+              : inventory?.districtId,
+          SENDER_PROVINCE:
+            inventory === "Nhập thủ công"
+              ? senderProvince
+              : inventory?.provinceId,
           RECEIVER_DISTRICT: receiveProvince,
           RECEIVER_PROVINCE: receiveDistrict,
           PRODUCT_TYPE: valueProductType,
@@ -152,8 +175,14 @@ export async function action({ request, params }) {
           MONEY_COLLECTION: productCollectionPrice,
           ORDER_SERVICE_ADD: "",
           ORDER_SERVICE: serviceMatch,
-          SENDER_DISTRICT: senderDistrict,
-          SENDER_PROVINCE: senderProvince,
+          SENDER_DISTRICT:
+            inventory === "Nhập thủ công"
+              ? senderDistrict
+              : inventory?.districtId,
+          SENDER_PROVINCE:
+            inventory === "Nhập thủ công"
+              ? senderProvince
+              : inventory?.provinceId,
           RECEIVER_DISTRICT: receiveDistrict,
           RECEIVER_PROVINCE: receiveProvince,
           PRODUCT_LENGTH: productLength,
@@ -188,18 +217,28 @@ export async function action({ request, params }) {
 
         return formattedDate;
       }
-      // const rawData = {
+
+      // let rawData = {
       //   ORDER_NUMBER: "12",
-      //   GROUPADDRESS_ID: 5818802,
+      //   GROUPADDRESS_ID:
+      //     inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
       //   CUS_ID: 722,
       //   DELIVERY_DATE: "11/10/2018 15:09:52",
-      //   SENDER_FULLNAME: "Yanme Shop",
+      //   SENDER_FULLNAME:
+      //     inventory === "Nhập thủ công" ? senderName : inventory?.name,
       //   SENDER_ADDRESS:
       //     "Số 5A ngách 22 ngõ 282 Kim Giang, Đại Kim, Hoàng Mai, Hà Nội",
-      //   SENDER_PHONE: "0967.363.789",
+      //   SENDER_PHONE:
+      //     inventory === "Nhập thủ công" ? senderPhone : inventory?.phone,
       //   SENDER_EMAIL: "vanchinh.libra@gmail.com",
-      //   SENDER_DISTRICT: 4,
-      //   SENDER_PROVINCE: 1,
+      //   SENDER_DISTRICT:
+      //     inventory === "Nhập thủ công"
+      //       ? senderDistrict
+      //       : inventory?.districtId,
+      //   SENDER_PROVINCE:
+      //     inventory === "Nhập thủ công"
+      //       ? senderProvince
+      //       : inventory?.provinceId,
       //   SENDER_LATITUDE: 0,
       //   SENDER_LONGITUDE: 0,
       //   RECEIVER_FULLNAME: "Hoàng - Test",
@@ -238,15 +277,24 @@ export async function action({ request, params }) {
       // };
       const rawData = {
         ORDER_NUMBER: params.orderId,
-        GROUPADDRESS_ID: 5818802,
-        // CUS_ID: 722,
+        GROUPADDRESS_ID:
+          inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
+        CUS_ID: inventory === "Nhập thủ công" ? "" : inventory?.cusId,
         DELIVERY_DATE: formatDateTime(new Date()),
-        SENDER_FULLNAME: senderName,
+        SENDER_FULLNAME:
+          inventory === "Nhập thủ công" ? senderName : inventory?.name,
         SENDER_ADDRESS: senderFullAdress,
-        SENDER_PHONE: senderPhone,
+        SENDER_PHONE:
+          inventory === "Nhập thủ công" ? senderPhone : inventory?.phone,
         SENDER_EMAIL: senderEmail,
-        SENDER_DISTRICT: senderDistrict,
-        SENDER_PROVINCE: senderProvince,
+        SENDER_DISTRICT:
+          inventory === "Nhập thủ công"
+            ? senderDistrict
+            : inventory?.districtId,
+        SENDER_PROVINCE:
+          inventory === "Nhập thủ công"
+            ? senderProvince
+            : inventory?.provinceId,
         SENDER_WARD: senderWard,
         SENDER_LATITUDE: 0,
         SENDER_LONGITUDE: 0,
@@ -316,8 +364,22 @@ export async function action({ request, params }) {
           },
         });
       }
-    } else {
-      return "2";
+    } else if (_action == "GET_SENDER") {
+      const listInventoryRes = await axios.get(
+        "https://partner.viettelpost.vn/v2/user/listInventory",
+        {
+          headers: {
+            token: token,
+            // "Accept": "application/json, text/plain, */*",
+            accept: "*/*",
+            Authorization: `Bearer ${process.env.API_TOKEN}`,
+          },
+        }
+      );
+      return {
+        action: "GET_SENDER",
+        data: listInventoryRes?.data,
+      };
     }
   } else {
     return "no token";
@@ -326,6 +388,13 @@ export async function action({ request, params }) {
 
 export default function CreateViettelPost() {
   const navigate = useNavigate();
+
+  // loading ss
+
+  const [isLoadingGetSender, setIsLoadingGetSender] = useState(false);
+  const [isLoadingCheckServices, setIsLoadingCheckServices] = useState(false);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+
   const checkToken = localStorage.getItem("token") || "";
   if (!checkToken || checkToken === "undefined") {
     navigate("/app/login");
@@ -335,6 +404,11 @@ export default function CreateViettelPost() {
   const [token, setToken] = useState("");
 
   const shopOrdersData = useLoaderData();
+
+  let inventoryList = [];
+  const [selectedInventory, setSelectedInventory] = useState("");
+  const [optionsInventory, setOptionsInventory] = useState(inventoryList);
+
   const [senderName, setSenderName] = useState("");
   const [actionForm, setActionForm] = useState("");
   const [senderPhone, setSenderPhone] = useState(
@@ -442,6 +516,7 @@ export default function CreateViettelPost() {
         navigate("/app/login");
       } else {
         if (dataAction.action === "GET_SERVICE") {
+          setIsLoadingCheckServices(false);
           if (dataAction?.data?.error) {
             alert(dataAction?.data?.message);
           } else {
@@ -456,6 +531,7 @@ export default function CreateViettelPost() {
           }
         }
         if (dataAction.action === "CHECK_PRICES") {
+          setIsLoadingPrices(false);
           if (dataAction?.data?.error) {
             alert(dataAction?.data?.message);
           } else {
@@ -471,6 +547,24 @@ export default function CreateViettelPost() {
             );
             navigate("/app");
           }
+        }
+        if (dataAction.action === "GET_SENDER") {
+          let invenTemp = dataAction?.data.data?.map((value) => {
+            return {
+              label: value.address,
+              value: JSON.stringify(value),
+            };
+          });
+          invenTemp = [
+            ...invenTemp,
+            {
+              label: "Nhập thủ công",
+              value: "Nhập thủ công",
+            },
+          ];
+          setIsLoadingGetSender(false);
+          setOptionsInventory(invenTemp);
+          console.log("inven in use==>", invenTemp);
         }
       }
     }
@@ -600,6 +694,10 @@ export default function CreateViettelPost() {
       value: value.PROVINCE_ID.toString(),
     };
   });
+  const handleSelectChangeInventory = useCallback((value) => {
+    console.log("value: " + value);
+    setSelectedInventory(value);
+  }, []);
   // console.log("opt", optionsProvince);
   const [orders, setOrders] = useState(shopOrdersData.order);
   console.log("order==>", orders);
@@ -649,6 +747,10 @@ export default function CreateViettelPost() {
     setTotalWeight(totalWeight);
     setTotalPrice(totalPrice);
   }, [listProductsItem]);
+
+  useEffect(() => {
+    console.log("inven xử lý", selectedInventory);
+  }, [selectedInventory]);
   // console.log("date post==>", {
   //   ORDER_NUMBER: params.orderId,
   //   GROUPADDRESS_ID: 0,
@@ -745,27 +847,115 @@ export default function CreateViettelPost() {
                   autoComplete="off"
                 />
                 <b>NGƯỜI GỬI:</b>
-                <FormLayout.Group>
+
+                <Button
+                  submit
+                  loading={isLoadingGetSender}
+                  onClick={() => {
+                    setIsLoadingGetSender(true);
+                    setToken(localStorage.getItem("token") || "");
+                    setActionForm("GET_SENDER");
+                  }}
+                >
+                  Lấy danh sách người gửi
+                </Button>
+                <Select
+                  label=""
+                  name="inventory"
+                  options={optionsInventory}
+                  onChange={handleSelectChangeInventory}
+                  value={selectedInventory}
+                />
+
+                {selectedInventory === "Nhập thủ công" ? (
                   <FormLayout.Group>
-                    <TextField
-                      label="Tên Người Gửi:"
-                      value={senderName}
-                      name="senderName"
-                      onChange={(value) => {
-                        setSenderName(value);
-                      }}
-                      autoComplete="off"
-                    />
-                    <TextField
-                      label="Số điện thoại người gửi:"
-                      value={senderPhone}
-                      name="senderPhone"
-                      type="tel"
-                      onChange={(value) => {
-                        setSenderPhone(value);
-                      }}
-                      autoComplete="off"
-                    />
+                    <FormLayout.Group>
+                      <TextField
+                        label="Tên Người Gửi:"
+                        value={senderName}
+                        name="senderName"
+                        onChange={(value) => {
+                          setSenderName(value);
+                        }}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="Số điện thoại người gửi:"
+                        value={senderPhone}
+                        name="senderPhone"
+                        type="tel"
+                        onChange={(value) => {
+                          setSenderPhone(value);
+                        }}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="Email người gửi:"
+                        value={senderEmail}
+                        name="senderEmail"
+                        type="email"
+                        onChange={(value) => {
+                          setSenderEmail(value);
+                        }}
+                        autoComplete="off"
+                      />
+                    </FormLayout.Group>
+                    <Card>
+                      <FormLayout.Group>
+                        <i>Địa chỉ người gửi:</i>
+                        <Select
+                          label="Thành Phố/Tỉnh:"
+                          options={optionsProvince}
+                          name="senderProvince"
+                          onChange={handleSelectChangeProvinceSender}
+                          value={selectedProvinceSender}
+                        />
+                        <Select
+                          label="Quận/Huyện:"
+                          options={optionsDistrictSender}
+                          name="senderDistrict"
+                          onChange={handleSelectChangeDistrictSender}
+                          value={selectedDistrictSender}
+                        />
+                        <Select
+                          label="Phường/Xã:"
+                          name="senderWard"
+                          options={optionsWardSender}
+                          onChange={handleSelectChangeWardSender}
+                          value={selectedWardSender}
+                        />
+                        <TextField
+                          label="Số Nhà, Tên Đường:"
+                          value={senderSoNha}
+                          onChange={(value) => {
+                            setSenderSoNha(value);
+                          }}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          readOnly
+                          label="Địa chỉ tự động:"
+                          value={`${senderSoNha ? senderSoNha + "," : ""} ${
+                            optionsWardSender?.find(
+                              (w) => w?.value == selectedWardSender
+                            )?.label || ""
+                          }, ${
+                            optionsDistrictSender?.find(
+                              (dis) => dis?.value == selectedDistrictSender
+                            )?.label || ""
+                          }, ${
+                            optionsProvince.find(
+                              (value) => value.value == selectedProvinceSender
+                            ).label || ""
+                          }`}
+                          name="senderFullAdress"
+                          autoComplete="off"
+                        />
+                      </FormLayout.Group>
+                    </Card>
+                  </FormLayout.Group>
+                ) : (
+                  <FormLayout.Group>
                     <TextField
                       label="Email người gửi:"
                       value={senderEmail}
@@ -777,60 +967,7 @@ export default function CreateViettelPost() {
                       autoComplete="off"
                     />
                   </FormLayout.Group>
-                  <Card>
-                    <FormLayout.Group>
-                      <i>Địa chỉ người gửi:</i>
-                      <Select
-                        label="Thành Phố/Tỉnh:"
-                        options={optionsProvince}
-                        name="senderProvince"
-                        onChange={handleSelectChangeProvinceSender}
-                        value={selectedProvinceSender}
-                      />
-                      <Select
-                        label="Quận/Huyện:"
-                        options={optionsDistrictSender}
-                        name="senderDistrict"
-                        onChange={handleSelectChangeDistrictSender}
-                        value={selectedDistrictSender}
-                      />
-                      <Select
-                        label="Phường/Xã:"
-                        name="senderWard"
-                        options={optionsWardSender}
-                        onChange={handleSelectChangeWardSender}
-                        value={selectedWardSender}
-                      />
-                      <TextField
-                        label="Số Nhà, Tên Đường:"
-                        value={senderSoNha}
-                        onChange={(value) => {
-                          setSenderSoNha(value);
-                        }}
-                        autoComplete="off"
-                      />
-                      <TextField
-                        readOnly
-                        label="Địa chỉ tự động:"
-                        value={`${senderSoNha ? senderSoNha + "," : ""} ${
-                          optionsWardSender?.find(
-                            (w) => w?.value == selectedWardSender
-                          )?.label || ""
-                        }, ${
-                          optionsDistrictSender?.find(
-                            (dis) => dis?.value == selectedDistrictSender
-                          )?.label || ""
-                        }, ${
-                          optionsProvince.find(
-                            (value) => value.value == selectedProvinceSender
-                          ).label || ""
-                        }`}
-                        name="senderFullAdress"
-                        autoComplete="off"
-                      />
-                    </FormLayout.Group>
-                  </Card>
-                </FormLayout.Group>
+                )}
 
                 <hr />
                 <b>NGƯỜI NHẬN:</b>
@@ -1156,14 +1293,18 @@ export default function CreateViettelPost() {
                   />
                 </FormLayout.Group>
                 <Divider />
-                <button
+                <Button
+                  submit
+                  size="slim"
+                  loading={isLoadingCheckServices}
                   onClick={() => {
-                    setToken(localStorage.getItem("token")||"");
+                    setIsLoadingCheckServices(true);
+                    setToken(localStorage.getItem("token") || "");
                     setActionForm("CHECK_SERVICE");
                   }}
                 >
                   Kiểm tra dịch vụ phù hợp
-                </button>
+                </Button>
                 <Select
                   label="Dịch Vụ Phù Hợp:"
                   options={optionsServiceMatch}
@@ -1172,14 +1313,20 @@ export default function CreateViettelPost() {
                   name="serviceMatch"
                 />
                 <Card roundedAbove="md" background="bg-subdued">
-                  <button
+                  <Button
+                    size="slim"
+                    loading={isLoadingPrices}
+                    submit
                     onClick={() => {
+                      setIsLoadingPrices(true);
                       setToken(localStorage.getItem("token") || "");
                       setActionForm("CHECK_PRICES");
                     }}
                   >
                     Kiểm tra giá
-                  </button>
+                  </Button>
+                  <br />
+                  <br />
                   <Text variant="headingMd" as="h6">
                     Chi Phí Ước Tính:
                   </Text>
@@ -1262,16 +1409,20 @@ export default function CreateViettelPost() {
                     </List>
                   </FormLayout.Group>
                 </Card>
-                <button
+                <Button
+                  submit
+                  destructive
                   onClick={() => {
                     setToken(localStorage.getItem("token") || "");
                     setActionForm("CREATE_ORDER");
                   }}
                 >
                   Tạo Đơn Viettel Post
-                </button>
+                </Button>
               </FormLayout>
             </Form>
+            {/* <br /> */}
+            <br />
             <Link to="/app">Back to Home page</Link>
           </Card>
         </Layout.Section>

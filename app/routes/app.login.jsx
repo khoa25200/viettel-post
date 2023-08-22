@@ -44,6 +44,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoadingLogin, setIsLoadingLogin] = useState(false);
 
   const [failMes, setFailMes] = useState("");
 
@@ -53,6 +54,7 @@ export default function Login() {
     console.log("loginpage=>", loginResponse);
     if (loginResponse?.error) {
       setFailMes(loginResponse?.message);
+      setIsLoadingLogin(false);
     } else {
       localStorage.setItem("token", loginResponse?.data?.token);
       localStorage.setItem("phoneNumber", loginResponse?.data?.phone);
@@ -64,6 +66,8 @@ export default function Login() {
         localPhoneNumber === loginResponse?.data?.phone
       ) {
         // alert("Đăng nhập thành công !!!!");
+        setIsLoadingLogin(false);
+        setFailMes("Đăng nhập thành công!!! Đang điều hướng...")
         navigate("/app");
       }
       // navigate("/app");
@@ -117,11 +121,15 @@ export default function Login() {
 
               <ButtonGroup>
                 <Button
+                  loading={isLoadingLogin}
                   submit
                   textAlign="center"
                   destructive
+                  onClick={() => {
+                    setIsLoadingLogin(true);
+                  }}
                 >
-                  Đăng Nhập 
+                  Đăng Nhập
                 </Button>
 
                 <Button
