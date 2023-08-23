@@ -54,10 +54,19 @@ export const loader = async ({ request, params }) => {
             lastName
             phone
             email
+             addresses {
+                address1
+                address2
+                firstName
+                lastName
+                phone
+            }
             defaultAddress{
-              address1
-              address2
-              phone
+                address1
+                address2
+                firstName
+                lastName
+                phone
             }
           }
         }
@@ -427,8 +436,9 @@ export default function CreateViettelPost() {
     shopOrdersData.order?.customer?.displayName || ""
   );
   const [receivePhone, setReceivePhone] = useState(
-    shopOrdersData.order?.customer?.phone || shopOrdersData.order?.customer?.defaultAddress
-    ?.phone || ""
+    shopOrdersData.order?.customer?.phone ||
+      shopOrdersData.order?.customer?.defaultAddress?.phone ||
+      ""
   );
 
   const provinceData = shopOrdersData.provinceResponse;
@@ -437,7 +447,7 @@ export default function CreateViettelPost() {
     shopOrdersData.order.email || ""
   );
   const [receiveEmail, setReceiveEmail] = useState(
-    shopOrdersData?.order?.customer?.email || ""
+    shopOrdersData?.order?.customer?.defaultAddress?.email || ""
   );
 
   const [senderSoNha, setSenderSoNha] = useState("");
@@ -560,7 +570,7 @@ export default function CreateViettelPost() {
         if (dataAction.action === "GET_SENDER") {
           let invenTemp = dataAction?.data.data?.map((value) => {
             return {
-              label: value.address,
+              label: `${value.name} - ${value.address} - ${value.phone}`,
               value: JSON.stringify(value),
             };
           });
@@ -1015,19 +1025,76 @@ export default function CreateViettelPost() {
                     />
                     <Card>
                       <Text variant="headingMd" as="h6">
-                        Thông tin khách hàng trong Shopify:
+                        Thông tin khách hàng: <Button
+                  plain
+                  textAlign="left"
+                  url={`https://admin.shopify.com/store/${shopOrdersData.shop}/customers/${shopOrdersData.order?.customer?.id.split('/')[shopOrdersData.order?.customer?.id.split('/').length-1]}`}
+                  target="_blank"
+                >
+                  #View📝
+                </Button>
                       </Text>
-                      ➭<b>Tên người nhận:</b> {shopOrdersData.order?.customer?.displayName || "_"}
-                      <br />
-                      ➭<b>Sđt:</b> {shopOrdersData.order?.customer?.phone || shopOrdersData.order?.customer?.defaultAddress
-                        ?.phone || "_"}
-                      <br />
-                      ➭<b>email:</b>{" "}
-                      {shopOrdersData.order?.customer?.email || "_"}
-                      <br />
-                      ➭<b>Địa chỉ:</b>{" "}
+                      ➭<b>Tên người nhận:</b>{" "}
+                      {shopOrdersData.order?.customer?.displayName || "_"}
+                      <br />➭<b>Sđt:</b>{" "}
+                      {shopOrdersData.order?.customer?.defaultAddress?.phone ||
+                        "_"}
+                      <br />➭<b>email:</b>{" "}
+                      {shopOrdersData.order?.customer?.defaultAddress?.email ||
+                        "_"}
+                      <br />➭<b>Địa chỉ: </b>
                       {shopOrdersData.order?.customer?.defaultAddress
-                        ?.address1 || "?"}
+                        ?.address1 || "_"}
+                      <br />
+                      <br />
+                      {shopOrdersData.order?.customer?.addresses?.map(
+                        (value, index) => {
+                          return (
+                            <>
+                              <Card>
+                                <i>🏢Địa chỉ #{index + 1}:</i>
+                                <Text variant="bodySm" as="p">
+                                  Tên:{" "}
+                                  <span style={{ color: "green" }}>
+                                    {" "}
+                                    {value?.firstName + " " + value?.lastName ||
+                                      "_"}
+                                  </span>
+                                </Text>{" "}
+                                <Text variant="bodySm" as="p">
+                                  Sđt:
+                                  <span style={{ color: "green" }}>
+                                    {" "}
+                                    {value?.phone || "_"}
+                                  </span>
+                                </Text>
+                                <Text variant="bodySm" as="p">
+                                  Địa chỉ:
+                                  <br />
+                                  <i> + Địa chỉ 1:</i>
+                                  <span style={{ color: "green" }}>
+                                    {" "}
+                                    {value?.address1 || "_"}
+                                  </span>
+                                  {value?.address2 ? (
+                                    <>
+                                      <br />
+                                      <i> + Địa chỉ 2:</i>
+                                      <span style={{ color: "green" }}>
+                                        {" "}
+                                        {value?.address2 || "_"}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <></>
+                                  )}
+                                </Text>
+                              </Card>
+                              <br />
+                            </>
+                          );
+                        }
+                      )}
                     </Card>
                   </FormLayout.Group>
                   <Card>
@@ -1242,8 +1309,9 @@ export default function CreateViettelPost() {
 
                 <FormLayout.Group>
                   <TextField
+                    disabled
                     label="Tên Đơn Hàng:"
-                    value={productMainName}
+                    value={listProductsItem[0]?.name || productMainName}
                     onChange={(value) => {
                       setProductMainName(value);
                     }}
