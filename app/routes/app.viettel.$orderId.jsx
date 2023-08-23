@@ -22,6 +22,7 @@ import {
   useSubmit,
   Form,
   useNavigate,
+  useFetcher,
 } from "@remix-run/react";
 import { apiVersion, authenticate } from "../shopify.server";
 
@@ -84,31 +85,18 @@ export const loader = async ({ request, params }) => {
       },
     }
   );
-  // const listInventoryRes = await axios.get(
-  //   "https://partner.viettelpost.vn/v2/user/listInventory",
-  //   {
-  //     headers: {
-  //       token:
-  //         "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwOTE4NDE0ODQ4IiwiVXNlcklkIjo2NzMyMTMyLCJGcm9tU291cmNlIjo1LCJUb2tlbiI6IkVRUkVRSVpNWkhLVFVYTDgiLCJleHAiOjE2OTI3NTMxOTAsIlBhcnRuZXIiOjY3MzIxMzJ9.5PvNqhS1Kq-7IcP8hlS2k9d_8ci4M76ADzn99hF_pe2fUph6SWGne611dKhttTtX5h3phob_FI-QXaUwaiDCYA",
-  //       // "Accept": "application/json, text/plain, */*",
-  //       accept: "*/*",
-  //       Authorization: `Bearer ${process.env.API_TOKEN}`,
-  //     },
-  //   }
-  // );
   return json({
     order: responseJson?.data?.order,
     shop: session?.shop?.replace(".myshopify.com", ""),
     provinceResponse: provinceRes?.data,
-    // listIventory: listInventoryRes?.data,
   });
 };
 
 export async function action({ request, params }) {
   const body = await request.formData();
   const token = body.get("token");
+
   if (token) {
-    // get from form data
     const _action = body.get("_action");
     let inventory = body.get("inventory");
     if (inventory !== "Nhập thủ công") {
@@ -146,257 +134,309 @@ export async function action({ request, params }) {
     const collectionOptions = body.get("collectionOptions");
 
     const listProductsItem = JSON.parse(body.get("listProductsItem"));
-
-    if (_action === "CHECK_SERVICE") {
-      const responseServiceList = await axios.post(
-        `https://partner.viettelpost.vn/v2/order/getPriceAll`,
-        {
-          SENDER_DISTRICT:
-            inventory === "Nhập thủ công"
-              ? senderDistrict
-              : inventory?.districtId,
-          SENDER_PROVINCE:
-            inventory === "Nhập thủ công"
-              ? senderProvince
-              : inventory?.provinceId,
-          RECEIVER_DISTRICT: receiveProvince,
-          RECEIVER_PROVINCE: receiveDistrict,
-          PRODUCT_TYPE: valueProductType,
-          PRODUCT_WEIGHT: totalWeight,
-          PRODUCT_PRICE: totalPrice,
-          MONEY_COLLECTION: productCollectionPrice,
-          PRODUCT_LENGTH: productLength,
-          PRODUCT_WIDTH: productWidth,
-          PRODUCT_HEIGHT: productHeight,
-          TYPE: 1,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Token: token,
-            // Cookie: "SERVERID=A"
+    switch (_action) {
+      case "CHECK_SERVICE":
+        const responseServiceList = await axios.post(
+          `https://partner.viettelpost.vn/v2/order/getPriceAll`,
+          {
+            SENDER_DISTRICT:
+              inventory === "Nhập thủ công"
+                ? senderDistrict
+                : inventory?.districtId,
+            SENDER_PROVINCE:
+              inventory === "Nhập thủ công"
+                ? senderProvince
+                : inventory?.provinceId,
+            RECEIVER_DISTRICT: receiveProvince,
+            RECEIVER_PROVINCE: receiveDistrict,
+            PRODUCT_TYPE: valueProductType,
+            PRODUCT_WEIGHT: totalWeight,
+            PRODUCT_PRICE: totalPrice,
+            MONEY_COLLECTION: productCollectionPrice,
+            PRODUCT_LENGTH: productLength,
+            PRODUCT_WIDTH: productWidth,
+            PRODUCT_HEIGHT: productHeight,
+            TYPE: 1,
           },
-        }
-      );
-
-      return {
-        action: "GET_SERVICE",
-        data: responseServiceList?.data,
-      };
-    } else if (_action === "CHECK_PRICES") {
-      const responsePricesEstimate = await axios.post(
-        `https://partner.viettelpost.vn/v2/order/getPrice`,
-        {
-          PRODUCT_WEIGHT: totalWeight,
-          PRODUCT_PRICE: totalPrice,
-          MONEY_COLLECTION: productCollectionPrice,
-          ORDER_SERVICE_ADD: "",
-          ORDER_SERVICE: serviceMatch,
-          SENDER_DISTRICT:
-            inventory === "Nhập thủ công"
-              ? senderDistrict
-              : inventory?.districtId,
-          SENDER_PROVINCE:
-            inventory === "Nhập thủ công"
-              ? senderProvince
-              : inventory?.provinceId,
-          RECEIVER_DISTRICT: receiveDistrict,
-          RECEIVER_PROVINCE: receiveProvince,
-          PRODUCT_LENGTH: productLength,
-          PRODUCT_WIDTH: productWidth,
-          PRODUCT_HEIGHT: productHeight,
-          PRODUCT_TYPE: valueProductType,
-          NATIONAL_TYPE: 1,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Token: token,
-            // Cookie: "SERVERID=A"
-          },
-        }
-      );
-      return {
-        action: "CHECK_PRICES",
-        data: responsePricesEstimate.data,
-      };
-    } else if (_action === "CREATE_ORDER") {
-      // Tạo đơn
-      function formatDateTime(dateTime) {
-        const day = dateTime.getDate();
-        const month = dateTime.getMonth() + 1;
-        const year = dateTime.getFullYear();
-        const hours = dateTime.getHours();
-        const minutes = dateTime.getMinutes();
-        const seconds = dateTime.getSeconds();
-
-        const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-
-        return formattedDate;
-      }
-
-      // let rawData = {
-      //   ORDER_NUMBER: "12",
-      //   GROUPADDRESS_ID:
-      //     inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
-      //   CUS_ID: 722,
-      //   DELIVERY_DATE: "11/10/2018 15:09:52",
-      //   SENDER_FULLNAME:
-      //     inventory === "Nhập thủ công" ? senderName : inventory?.name,
-      //   SENDER_ADDRESS:
-      //     "Số 5A ngách 22 ngõ 282 Kim Giang, Đại Kim, Hoàng Mai, Hà Nội",
-      //   SENDER_PHONE:
-      //     inventory === "Nhập thủ công" ? senderPhone : inventory?.phone,
-      //   SENDER_EMAIL: "vanchinh.libra@gmail.com",
-      //   SENDER_DISTRICT:
-      //     inventory === "Nhập thủ công"
-      //       ? senderDistrict
-      //       : inventory?.districtId,
-      //   SENDER_PROVINCE:
-      //     inventory === "Nhập thủ công"
-      //       ? senderProvince
-      //       : inventory?.provinceId,
-      //   SENDER_LATITUDE: 0,
-      //   SENDER_LONGITUDE: 0,
-      //   RECEIVER_FULLNAME: "Hoàng - Test",
-      //   RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
-      //   RECEIVER_PHONE: "0907882792",
-      //   RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
-      //   RECEIVER_PROVINCE: 34,
-      //   RECEIVER_DISTRICT: 390,
-      //   RECEIVER_WARDS: 7393,
-      //   RECEIVER_LATITUDE: 0,
-      //   RECEIVER_LONGITUDE: 0,
-      //   PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-      //   PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
-      //   PRODUCT_QUANTITY: 1,
-      //   PRODUCT_PRICE: 2292764,
-      //   PRODUCT_WEIGHT: 40000,
-      //   PRODUCT_LENGTH: 38,
-      //   PRODUCT_WIDTH: 24,
-      //   PRODUCT_HEIGHT: 25,
-      //   PRODUCT_TYPE: "HH",
-      //   ORDER_PAYMENT: 3,
-      //   ORDER_SERVICE: "VCBO",
-      //   ORDER_SERVICE_ADD: "",
-      //   ORDER_VOUCHER: "",
-      //   ORDER_NOTE: "cho xem hàng, không cho thử",
-      //   MONEY_COLLECTION: 2292764,
-      //   // "CHECK_UNIQUE": true,
-      //   LIST_ITEM: [
-      //     {
-      //       PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-      //       PRODUCT_PRICE: 2150000,
-      //       PRODUCT_WEIGHT: 2500,
-      //       PRODUCT_QUANTITY: 1,
-      //     },
-      //   ],
-      // };
-      const rawData = {
-        ORDER_NUMBER: params.orderId,
-        GROUPADDRESS_ID:
-          inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
-        CUS_ID: inventory === "Nhập thủ công" ? "" : inventory?.cusId,
-        DELIVERY_DATE: formatDateTime(new Date()),
-        SENDER_FULLNAME:
-          inventory === "Nhập thủ công" ? senderName : inventory?.name,
-        SENDER_ADDRESS: senderFullAdress,
-        SENDER_PHONE:
-          inventory === "Nhập thủ công" ? senderPhone : inventory?.phone,
-        SENDER_EMAIL: senderEmail,
-        SENDER_DISTRICT:
-          inventory === "Nhập thủ công"
-            ? senderDistrict
-            : inventory?.districtId,
-        SENDER_PROVINCE:
-          inventory === "Nhập thủ công"
-            ? senderProvince
-            : inventory?.provinceId,
-        SENDER_WARD: senderWard,
-        SENDER_LATITUDE: 0,
-        SENDER_LONGITUDE: 0,
-        RECEIVER_FULLNAME: receiveName,
-        RECEIVER_ADDRESS: receiveFullAddress,
-        RECEIVER_PHONE: receivePhone,
-        RECEIVER_EMAIL: receiveEmail,
-        RECEIVER_PROVINCE: receiveProvince,
-        RECEIVER_DISTRICT: receiveDistrict,
-        RECEIVER_WARDS: receiveWard,
-        RECEIVER_LATITUDE: 0,
-        RECEIVER_LONGITUDE: 0,
-        PRODUCT_NAME: productMainName || listProductsItem[0]?.name,
-        PRODUCT_DESCRIPTION: productMainDes,
-        PRODUCT_QUANTITY: totalQuantity,
-        PRODUCT_PRICE: totalPrice,
-        PRODUCT_WEIGHT: totalWeight,
-        PRODUCT_LENGTH: productLength,
-        PRODUCT_WIDTH: productWidth,
-        PRODUCT_HEIGHT: productHeight,
-        PRODUCT_TYPE: valueProductType,
-        ORDER_PAYMENT: Number(collectionOptions),
-        ORDER_SERVICE: serviceMatch,
-        ORDER_SERVICE_ADD: "",
-        ORDER_VOUCHER: "",
-        ORDER_NOTE: productNote,
-        MONEY_COLLECTION: productCollectionPrice,
-        CHECK_UNIQUE: false,
-        LIST_ITEM: listProductsItem?.map((product) => {
-          return {
-            PRODUCT_NAME: product?.name,
-            PRODUCT_PRICE: product?.price,
-            PRODUCT_WEIGHT: product?.weight,
-            PRODUCT_QUANTITY: product?.quan,
-          };
-        }),
-      };
-
-      const { admin } = await authenticate.admin(request);
-      let responseAllSuccess = {};
-      const dataAction = await axios.post(
-        "https://partner.viettelpost.vn/v2/order/createOrder",
-        rawData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.API_TOKEN}`,
-            token: token,
-          },
-        }
-      );
-      try {
-        createMetafield(params.orderId, dataAction?.data?.data?.ORDER_NUMBER);
-        responseAllSuccess = dataAction.data;
-      } catch (err) {}
-      return { action: "CREATE_ORDER", data: responseAllSuccess };
-      async function createMetafield(orderId, newValue) {
-        await admin.rest.post({
-          path: `/orders/${orderId}/metafields.json`,
-          data: {
-            metafield: {
-              namespace: "custom",
-              key: "viettelPostTrackingId",
-              type: "single_line_text_field",
-              value: newValue,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Token: token,
             },
+          }
+        );
+
+        return {
+          action: "GET_SERVICE",
+          data: responseServiceList?.data,
+        };
+      case "CHECK_PRICES":
+        const responsePricesEstimate = await axios.post(
+          `https://partner.viettelpost.vn/v2/order/getPrice`,
+          {
+            PRODUCT_WEIGHT: totalWeight,
+            PRODUCT_PRICE: totalPrice,
+            MONEY_COLLECTION: productCollectionPrice,
+            ORDER_SERVICE_ADD: "",
+            ORDER_SERVICE: serviceMatch,
+            SENDER_DISTRICT:
+              inventory === "Nhập thủ công"
+                ? senderDistrict
+                : inventory?.districtId,
+            SENDER_PROVINCE:
+              inventory === "Nhập thủ công"
+                ? senderProvince
+                : inventory?.provinceId,
+            RECEIVER_DISTRICT: receiveDistrict,
+            RECEIVER_PROVINCE: receiveProvince,
+            PRODUCT_LENGTH: productLength,
+            PRODUCT_WIDTH: productWidth,
+            PRODUCT_HEIGHT: productHeight,
+            PRODUCT_TYPE: valueProductType,
+            NATIONAL_TYPE: 1,
           },
-        });
-      }
-    } else if (_action == "GET_SENDER") {
-      const listInventoryRes = await axios.get(
-        "https://partner.viettelpost.vn/v2/user/listInventory",
-        {
-          headers: {
-            token: token,
-            // "Accept": "application/json, text/plain, */*",
-            accept: "*/*",
-            Authorization: `Bearer ${process.env.API_TOKEN}`,
-          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Token: token,
+            },
+          }
+        );
+        return {
+          action: "CHECK_PRICES",
+          data: responsePricesEstimate.data,
+        };
+      case "CREATE_ORDER":
+        // Tạo đơn
+        function formatDateTime(dateTime) {
+          const day = dateTime.getDate();
+          const month = dateTime.getMonth() + 1;
+          const year = dateTime.getFullYear();
+          const hours = dateTime.getHours();
+          const minutes = dateTime.getMinutes();
+          const seconds = dateTime.getSeconds();
+
+          const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
+          return formattedDate;
         }
-      );
-      return {
-        action: "GET_SENDER",
-        data: listInventoryRes?.data,
-      };
+
+        // let rawData = {
+        //   ORDER_NUMBER: "12",
+        //   GROUPADDRESS_ID:
+        //     inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
+        //   CUS_ID: 722,
+        //   DELIVERY_DATE: "11/10/2018 15:09:52",
+        //   SENDER_FULLNAME:
+        //     inventory === "Nhập thủ công" ? senderName : inventory?.name,
+        //   SENDER_ADDRESS:
+        //     "Số 5A ngách 22 ngõ 282 Kim Giang, Đại Kim, Hoàng Mai, Hà Nội",
+        //   SENDER_PHONE:
+        //     inventory === "Nhập thủ công" ? senderPhone : inventory?.phone,
+        //   SENDER_EMAIL: "vanchinh.libra@gmail.com",
+        //   SENDER_DISTRICT:
+        //     inventory === "Nhập thủ công"
+        //       ? senderDistrict
+        //       : inventory?.districtId,
+        //   SENDER_PROVINCE:
+        //     inventory === "Nhập thủ công"
+        //       ? senderProvince
+        //       : inventory?.provinceId,
+        //   SENDER_LATITUDE: 0,
+        //   SENDER_LONGITUDE: 0,
+        //   RECEIVER_FULLNAME: "Hoàng - Test",
+        //   RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
+        //   RECEIVER_PHONE: "0907882792",
+        //   RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
+        //   RECEIVER_PROVINCE: 34,
+        //   RECEIVER_DISTRICT: 390,
+        //   RECEIVER_WARDS: 7393,
+        //   RECEIVER_LATITUDE: 0,
+        //   RECEIVER_LONGITUDE: 0,
+        //   PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+        //   PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
+        //   PRODUCT_QUANTITY: 1,
+        //   PRODUCT_PRICE: 2292764,
+        //   PRODUCT_WEIGHT: 40000,
+        //   PRODUCT_LENGTH: 38,
+        //   PRODUCT_WIDTH: 24,
+        //   PRODUCT_HEIGHT: 25,
+        //   PRODUCT_TYPE: "HH",
+        //   ORDER_PAYMENT: 3,
+        //   ORDER_SERVICE: "VCBO",
+        //   ORDER_SERVICE_ADD: "",
+        //   ORDER_VOUCHER: "",
+        //   ORDER_NOTE: "cho xem hàng, không cho thử",
+        //   MONEY_COLLECTION: 2292764,
+        //   // "CHECK_UNIQUE": true,
+        //   LIST_ITEM: [
+        //     {
+        //       PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+        //       PRODUCT_PRICE: 2150000,
+        //       PRODUCT_WEIGHT: 2500,
+        //       PRODUCT_QUANTITY: 1,
+        //     },
+        //   ],
+        // };
+        const rawData = {
+          ORDER_NUMBER: params.orderId,
+          GROUPADDRESS_ID:
+            inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
+          CUS_ID: inventory === "Nhập thủ công" ? "" : inventory?.cusId,
+          DELIVERY_DATE: formatDateTime(new Date()),
+          SENDER_FULLNAME:
+            inventory === "Nhập thủ công" ? senderName : inventory?.name,
+          SENDER_ADDRESS: senderFullAdress,
+          SENDER_PHONE:
+            inventory === "Nhập thủ công" ? senderPhone : inventory?.phone,
+          SENDER_EMAIL: senderEmail,
+          SENDER_DISTRICT:
+            inventory === "Nhập thủ công"
+              ? senderDistrict
+              : inventory?.districtId,
+          SENDER_PROVINCE:
+            inventory === "Nhập thủ công"
+              ? senderProvince
+              : inventory?.provinceId,
+          SENDER_WARD: senderWard,
+          SENDER_LATITUDE: 0,
+          SENDER_LONGITUDE: 0,
+          RECEIVER_FULLNAME: receiveName,
+          RECEIVER_ADDRESS: receiveFullAddress,
+          RECEIVER_PHONE: receivePhone,
+          RECEIVER_EMAIL: receiveEmail,
+          RECEIVER_PROVINCE: receiveProvince,
+          RECEIVER_DISTRICT: receiveDistrict,
+          RECEIVER_WARDS: receiveWard,
+          RECEIVER_LATITUDE: 0,
+          RECEIVER_LONGITUDE: 0,
+          PRODUCT_NAME: productMainName || listProductsItem[0]?.name,
+          PRODUCT_DESCRIPTION: productMainDes,
+          PRODUCT_QUANTITY: totalQuantity,
+          PRODUCT_PRICE: totalPrice,
+          PRODUCT_WEIGHT: totalWeight,
+          PRODUCT_LENGTH: productLength,
+          PRODUCT_WIDTH: productWidth,
+          PRODUCT_HEIGHT: productHeight,
+          PRODUCT_TYPE: valueProductType,
+          ORDER_PAYMENT: Number(collectionOptions),
+          ORDER_SERVICE: serviceMatch,
+          ORDER_SERVICE_ADD: "",
+          ORDER_VOUCHER: "",
+          ORDER_NOTE: productNote,
+          MONEY_COLLECTION: productCollectionPrice,
+          CHECK_UNIQUE: false,
+          LIST_ITEM: listProductsItem?.map((product) => {
+            return {
+              PRODUCT_NAME: product?.name,
+              PRODUCT_PRICE: product?.price,
+              PRODUCT_WEIGHT: product?.weight,
+              PRODUCT_QUANTITY: product?.quan,
+            };
+          }),
+        };
+
+        const { admin } = await authenticate.admin(request);
+        let responseAllSuccess = {};
+        const dataAction = await axios.post(
+          "https://partner.viettelpost.vn/v2/order/createOrder",
+          rawData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.API_TOKEN}`,
+              token: token,
+            },
+          }
+        );
+        try {
+          createMetafield(params.orderId, dataAction?.data?.data?.ORDER_NUMBER);
+          responseAllSuccess = dataAction.data;
+        } catch (err) {}
+        return { action: "CREATE_ORDER", data: responseAllSuccess };
+        async function createMetafield(orderId, newValue) {
+          await admin.rest.post({
+            path: `/orders/${orderId}/metafields.json`,
+            data: {
+              metafield: {
+                namespace: "custom",
+                key: "viettelPostTrackingId",
+                type: "single_line_text_field",
+                value: newValue,
+              },
+            },
+          });
+        }
+      case "GET_SENDER":
+        const listInventoryRes = await axios.get(
+          "https://partner.viettelpost.vn/v2/user/listInventory",
+          {
+            headers: {
+              token: token,
+              accept: "*/*",
+              Authorization: `Bearer ${process.env.API_TOKEN}`,
+            },
+          }
+        );
+        return {
+          action: "GET_SENDER",
+          data: listInventoryRes?.data,
+        };
+      case "GET_RECIEVERDISTRICTS":
+        async function getWardsTempR(disId) {
+          const resWardsTempR = await axios.get(
+            `https://partner.viettelpost.vn/v2/categories/listWards?districtId=121}`
+          );
+          return resWardsTempR;
+        }
+        const responseDistrictR = await axios
+          .get(
+            `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${receiveProvince}`
+          )
+          .then((res) => {
+            const temp = getWardsTempR();
+            return {
+              res: res,
+              temp: temp,
+            };
+          });
+        return {
+          action: "GET_RECIEVERDISTRICTS",
+          data: responseDistrictR.res.data,
+          tempW: responseDistrictR.temp,
+        };
+      // return {
+      //   action: "GET_RECIEVERDISTRICTS",
+      //   data: responseDistrictR.data
+      // };
+      case "GET_RECIEVERWARDS":
+        const responseWardR = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${receiveDistrict}`
+        );
+
+        return {
+          action: "GET_RECIEVERWARDS",
+          data: responseWardR.data,
+        };
+      case "GET_SENDERDISTRICTS":
+        const responseDistrictS = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${senderProvince}`
+        );
+        return {
+          action: "GET_SENDERDISTRICTS",
+          data: responseDistrictS.data,
+        };
+      case "GET_SENDERWARDS":
+        const responseWardS = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${senderDistrict}`
+        );
+        return {
+          action: "GET_SENDERWARDS",
+          data: responseWardS.data,
+        };
+      default:
+        return "no action";
+      // break;
     }
   } else {
     return "no token";
@@ -512,7 +552,7 @@ export default function CreateViettelPost() {
   });
 
   const [productMainName, setProductMainName] = useState(
-    listProductsItem[0].name
+    listProductsItem[0]?.name
   );
   const [productMainDes, setProductMainDes] = useState("");
   const [productMainNote, setProductMainNote] = useState("");
@@ -530,6 +570,7 @@ export default function CreateViettelPost() {
 
   useEffect(() => {
     console.log("Action data nè: ====?", dataAction);
+    setActionForm("");
     if (dataAction) {
       if (dataAction === "no token") {
         navigate("/app/login");
@@ -585,120 +626,102 @@ export default function CreateViettelPost() {
           setOptionsInventory(invenTemp);
           console.log("inven in use==>", invenTemp);
         }
+        if (dataAction.action === "GET_RECIEVERDISTRICTS") {
+          if (!dataAction.data.error) {
+            setOptionsDistrictReceive(
+              dataAction.data.data?.map((value) => {
+                return {
+                  label: value.DISTRICT_NAME,
+                  value: value.DISTRICT_ID.toString(),
+                };
+              })
+            );
+            setOptionsWardReceive(
+              dataAction?.tempW?.data?.map((value) => {
+                return {
+                  label: value.WARDS_NAME,
+                  value: value.WARDS_ID.toString(),
+                };
+              })
+            );
+          } else {
+            console.log(dataAction.data.message);
+          }
+        }
+        if (dataAction?.action === "GET_RECIEVERWARDS") {
+          if (!dataAction?.data?.error) {
+            setOptionsWardReceive(
+              dataAction?.data?.data?.map((value) => {
+                return {
+                  label: value.WARDS_NAME,
+                  value: value.WARDS_ID.toString(),
+                };
+              })
+            );
+          } else {
+            console.log(dataAction.data.message);
+          }
+        }
+        if (dataAction.action === "GET_SENDERDISTRICTS") {
+          if (!dataAction.data.error) {
+            setOptionsDistrictSender(
+              dataAction.data.data?.map((value) => {
+                return {
+                  label: value.DISTRICT_NAME,
+                  value: value.DISTRICT_ID.toString(),
+                };
+              })
+            );
+          } else {
+            console.log(dataAction.data.message);
+          }
+        }
+        if (dataAction?.action === "GET_SENDERWARDS") {
+          if (!dataAction?.data?.error) {
+            setOptionsWardSender(
+              dataAction?.data?.data?.map((value) => {
+                return {
+                  label: value.WARDS_NAME,
+                  value: value.WARDS_ID.toString(),
+                };
+              })
+            );
+          } else {
+            console.log(dataAction.data.message);
+          }
+        }
       }
     }
   }, [dataAction]);
-  useEffect(() => {
-    const getDis = async () => {
-      const responseDistrict = await axios.get(
-        `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${selectedProvinceSender}`
-      );
-      // console.log("dis lists==>", responseDistrict);
-      if (!responseDistrict.data.error) {
-        setOptionsDistrictSender(
-          responseDistrict.data.data?.map((value) => {
-            return {
-              label: value.DISTRICT_NAME,
-              value: value.DISTRICT_ID.toString(),
-            };
-          })
-        );
-      } else {
-        responseDistrict.data.message;
-      }
-    };
-    getDis().catch(console.error);
-  }, [selectedProvinceSender]);
-  useEffect(() => {
-    const getDis = async () => {
-      const responseDistrict = await axios.get(
-        `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${selectedProvinceReceive}`
-      );
-      // console.log("dis lists==>", responseDistrict);
-      if (!responseDistrict.data.error) {
-        setOptionsDistrictReceive(
-          responseDistrict.data.data?.map((value) => {
-            return {
-              label: value.DISTRICT_NAME,
-              value: value.DISTRICT_ID.toString(),
-            };
-          })
-        );
-      } else {
-        responseDistrict.data.message;
-      }
-    };
-    getDis().catch(console.error);
-  }, [selectedProvinceReceive]);
 
-  useEffect(() => {
-    const getWardsSender = async () => {
-      const responseWard = await axios.get(
-        `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${selectedDistrictSender}`
-      );
-      // console.log("dis lists==>", responseWard);
-      if (!responseWard.data.error) {
-        setOptionsWardSender(
-          responseWard.data.data?.map((value) => {
-            return {
-              label: value.WARDS_NAME,
-              value: value.WARDS_ID.toString(),
-            };
-          })
-        );
-      } else {
-        responseWard.data.message;
-      }
-    };
-    getWardsSender().catch(console.error);
-  }, [selectedDistrictSender]);
-
-  useEffect(() => {
-    const getWardsReceiver = async () => {
-      const responseWard = await axios.get(
-        `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${selectedDistrictReceive}`
-      );
-      // console.log("dis lists==>", responseWard);
-      if (!responseWard.data.error) {
-        setOptionsWardReceive(
-          responseWard.data.data?.map((value) => {
-            return {
-              label: value.WARDS_NAME,
-              value: value.WARDS_ID.toString(),
-            };
-          })
-        );
-      } else {
-        responseWard.data.message;
-      }
-    };
-    getWardsReceiver().catch(console.error);
-  }, [selectedDistrictReceive]);
-
-  const handleSelectChangeProvinceSender = useCallback(
-    (value) => setSelectedProvinceSender(value),
-    []
-  );
-  const handleSelectChangeDistrictSender = useCallback(
-    (value) => setSelectedDistrictSender(value),
-    []
-  );
-  const handleSelectChangeWardSender = useCallback(
-    (value) => setSelectedWardSender(value),
-    []
-  );
-  const handleSelectChangeProvinceReceive = useCallback(
-    (value) => setSelectedProvinceReceive(value),
-    []
-  );
-  const handleSelectChangeDistrictReceive = useCallback(
-    (value) => setSelectedDistrictReceive(value),
-    []
-  );
-  const handleSelectChangeWardReceive = useCallback(
-    (value) => setSelectedWardReceive(value),
-    []
-  );
+  const handleSelectChangeProvinceSender = useCallback((value) => {
+    setToken(localStorage.getItem("token") || "");
+    setActionForm("GET_SENDERDISTRICTS");
+    setSelectedProvinceSender(value);
+  }, []);
+  const handleSelectChangeDistrictSender = useCallback((value) => {
+    setToken(localStorage.getItem("token") || "");
+    setActionForm("GET_SENDERWARDS");
+    setSelectedDistrictSender(value);
+  }, []);
+  const handleSelectChangeWardSender = useCallback((value) => {
+    setToken(localStorage.getItem("token") || "");
+    setSelectedWardSender(value);
+  }, []);
+  const handleSelectChangeProvinceReceive = (value) => {
+    setToken(localStorage.getItem("token") || "");
+    setActionForm("GET_RECIEVERDISTRICTS");
+    setSelectedProvinceReceive(value);
+  };
+  const handleSelectChangeDistrictReceive = useCallback((value) => {
+    setToken(localStorage.getItem("token") || "");
+    setActionForm("GET_RECIEVERWARDS");
+    setSelectedDistrictReceive(value);
+  }, []);
+  const handleSelectChangeWardReceive = useCallback((value) => {
+    setToken(localStorage.getItem("token") || "");
+    setSelectedWardReceive(value);
+  }, []);
   const handleSelectChangeServiceMatch = useCallback(
     (value) => setSelectedServiceMatch(value),
     []
@@ -722,31 +745,6 @@ export default function CreateViettelPost() {
   console.log("order==>", orders);
   const params = useParams();
   const orderId = params.orderId;
-
-  function formatDate(dateString) {
-    const date = new Date(dateString);
-    date.setHours(date.getHours() + 7); // Thêm 7 giờ để chuyển múi giờ
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds();
-
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-  }
-  function formatDateTime(dateTime) {
-    const day = dateTime.getDate();
-    const month = dateTime.getMonth() + 1;
-    const year = dateTime.getFullYear();
-    const hours = dateTime.getHours();
-    const minutes = dateTime.getMinutes();
-    const seconds = dateTime.getSeconds();
-
-    const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-
-    return formattedDate;
-  }
 
   const handleChangeProductType = useCallback(
     (_, newValue) => setValueProductType(newValue),
@@ -838,6 +836,7 @@ export default function CreateViettelPost() {
   //     };
   //   }),
   // });
+
   return (
     <Page>
       <Layout>
@@ -848,9 +847,15 @@ export default function CreateViettelPost() {
         </div>
         <Layout.Section>
           <Card>
-            <Form method="post">
-              <input type="hidden" name="_action" value={actionForm} />
-              <input type="hidden" name="token" value={token} />
+            <Form
+              method="post"
+              onBlur={(e) => {
+                e.preventDefault();
+                submit(e.currentTarget);
+              }}
+            >
+              <input type="text" name="_action" value={actionForm} />
+              <input type="text" name="token" value={token} />
               <FormLayout>
                 <Button
                   plain
@@ -1025,14 +1030,22 @@ export default function CreateViettelPost() {
                     />
                     <Card>
                       <Text variant="headingMd" as="h6">
-                        Thông tin khách hàng: <Button
-                  plain
-                  textAlign="left"
-                  url={`https://admin.shopify.com/store/${shopOrdersData.shop}/customers/${shopOrdersData.order?.customer?.id.split('/')[shopOrdersData.order?.customer?.id.split('/').length-1]}`}
-                  target="_blank"
-                >
-                  #View📝
-                </Button>
+                        Thông tin khách hàng:{" "}
+                        <Button
+                          plain
+                          textAlign="left"
+                          url={`https://admin.shopify.com/store/${
+                            shopOrdersData.shop
+                          }/customers/${
+                            shopOrdersData.order?.customer?.id.split("/")[
+                              shopOrdersData.order?.customer?.id.split("/")
+                                .length - 1
+                            ]
+                          }`}
+                          target="_blank"
+                        >
+                          #View📝
+                        </Button>
                       </Text>
                       ➭<b>Tên người nhận:</b>{" "}
                       {shopOrdersData.order?.customer?.displayName || "_"}
@@ -1050,7 +1063,7 @@ export default function CreateViettelPost() {
                       {shopOrdersData.order?.customer?.addresses?.map(
                         (value, index) => {
                           return (
-                            <>
+                            <div key={index}>
                               <Card>
                                 <i>🏢Địa chỉ #{index + 1}:</i>
                                 <Text variant="bodySm" as="p">
@@ -1091,7 +1104,7 @@ export default function CreateViettelPost() {
                                 </Text>
                               </Card>
                               <br />
-                            </>
+                            </div>
                           );
                         }
                       )}
@@ -1152,7 +1165,7 @@ export default function CreateViettelPost() {
                   </Card>
                 </FormLayout.Group>
 
-                <label>Chọn gian giao hàng dự kiến:</label>
+                <label>Chọn thời gian giao hàng dự kiến:</label>
                 <DatePicker
                   month={month}
                   year={year}
@@ -1190,7 +1203,7 @@ export default function CreateViettelPost() {
                 <label>Items:</label>
                 {listProductsItem?.map((product, index) => {
                   return (
-                    <>
+                    <div key={index}>
                       <Card>
                         <FormLayout.Group title={`#Sản phẩm ${index + 1}:`}>
                           <TextField
@@ -1255,7 +1268,7 @@ export default function CreateViettelPost() {
                         </Button>
                       </Card>
                       <br />
-                    </>
+                    </div>
                   );
                 })}
                 <input

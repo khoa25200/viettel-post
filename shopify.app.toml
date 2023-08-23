@@ -2,7 +2,7 @@
 
 name = "Shopvitel"
 client_id = "0a9ac768912fd0b8af52b7dd3e7e1e88"
-application_url = "https://nil-disabled-pure-past.trycloudflare.com"
+application_url = "https://requirements-without-member-maintenance.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -11,9 +11,9 @@ scopes = "read_orders,write_orders,read_customers"
 
 [auth]
 redirect_urls = [
-  "https://nil-disabled-pure-past.trycloudflare.com/auth/callback",
-  "https://nil-disabled-pure-past.trycloudflare.com/auth/shopify/callback",
-  "https://nil-disabled-pure-past.trycloudflare.com/api/auth/callback"
+  "https://requirements-without-member-maintenance.trycloudflare.com/auth/callback",
+  "https://requirements-without-member-maintenance.trycloudflare.com/auth/shopify/callback",
+  "https://requirements-without-member-maintenance.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
