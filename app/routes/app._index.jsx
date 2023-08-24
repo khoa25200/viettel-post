@@ -117,7 +117,9 @@ export async function action({ request }) {
       );
       const responseJson = await response.json();
       return json({
-        orders: responseJson.data.orders.edges.map((edge) => edge.node).reverse(),
+        orders: responseJson.data.orders.edges
+          .map((edge) => edge.node)
+          .reverse(),
       });
     } else if (_action === orderVIdPrint && orderVIdPrint && token) {
       const getFutureTimestamp = (minutes) => {
@@ -194,7 +196,7 @@ export default function Index() {
           alert(actionData?.print?.message);
         }
       } else {
-        setIsLoadingPrint(false)
+        setIsLoadingPrint(false);
         setLinkPrintV({
           orderVId: actionData?.orderVId,
           a5: `https://digitalize.viettelpost.vn/DigitalizePrint/report.do?type=1&bill=${actionData?.print?.message}&showPostage=1`,
@@ -219,9 +221,21 @@ export default function Index() {
 
   function convertUTCToVietnamTime(utcTimeString) {
     const utcTime = new Date(utcTimeString);
-    utcTime.setHours(utcTime.getHours() + 7);
+    const options = {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    };
 
-    return utcTime.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+    const vietnamTime = new Date(
+      utcTime.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    );
+    return vietnamTime.toLocaleString("vi-VN", {
+      ...options,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   }
   const [active, setActive] = useState(false);
 
@@ -235,10 +249,6 @@ export default function Index() {
 
   return (
     <Page>
-      {/* <ui-title-bar title="Home Viettel Post"></ui-title-bar> */}
-      {/* <ButtonGroup >
-        <Button destructive textAlign="right">Đăng Nhập</Button>
-      </ButtonGroup> */}
       <VerticalStack gap="6">
         <Layout>
           <Layout.Section>
@@ -264,31 +274,7 @@ export default function Index() {
               </Button>
               <br />
               <br />
-              {/* <button
-                onClick={() => {
-                  alert("hi");
-                }}
-              >
-                click
-              </button> */}
               <Card>
-                {/* <button
-                  onClick={() => {
-                    alert("hi");
-                    console.log("butonssd");
-                  }}
-                >
-                  click
-                </button> */}
-                {/* <Button
-                  // destructive
-                  onClick={() => {
-                    setActionForm("RELOAD_DATA");
-                    console.log("buton");
-                  }}
-                >
-                  Hi
-                </Button> */}
                 <DataTable
                   columnContentTypes={["text", "text", "text", "text", "text"]}
                   headings={columns}
@@ -310,28 +296,43 @@ export default function Index() {
                           Chưa tạo đơn Viettel Post
                         </i>
                       ),
+                      // order?.createdAt,
                       convertUTCToVietnamTime(order?.createdAt),
                       order?.customer?.displayName || "...",
                       <>
-                        <Link to={`/app/viettel/${getIdFormGrapQL(order?.id)}`}>
-                          <button
-                            disabled={order?.metafield?.value ? true : false}
+                        {!token ||
+                        token == undefined ||
+                        token === "undefined" ? (
+                          <Link to={`/app/login`}>
+                            <button
+                              disabled={order?.metafield?.value ? true : false}
+                            >
+                              🏴󠁧󠁢󠁥󠁮󠁧󠁿Tạo đơn
+                            </button>
+                          </Link>
+                        ) : (
+                          <Link
+                            to={`/app/viettel/${getIdFormGrapQL(order?.id)}`}
                           >
-                            🏴󠁧󠁢󠁥󠁮󠁧󠁿Tạo đơn
-                          </button>
-                        </Link>
+                            <button
+                              disabled={order?.metafield?.value ? true : false}
+                            >
+                              🏴󠁧󠁢󠁥󠁮󠁧󠁿Tạo đơn
+                            </button>
+                          </Link>
+                        )}
                         <button
-                        // loading={isLoadingPrint}
+                          // loading={isLoadingPrint}
                           // submit
                           disabled={order?.metafield?.value ? false : true}
                           onClick={() => {
-                            setIsLoadingPrint(true)
+                            setIsLoadingPrint(true);
                             setToken(localStorage.getItem("token") || "");
                             setOrderVIdPrint(order?.metafield?.value);
                             setActionForm(order?.metafield?.value);
                           }}
                         >
-                          🖨️In 
+                          🖨️In
                         </button>
                       </>,
                     ]) || []

@@ -85,18 +85,38 @@ export const loader = async ({ request, params }) => {
       },
     }
   );
+  const firstDisList = await axios.get(
+    "https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=1",
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.API_TOKEN}`,
+      },
+    }
+  );
+  const firstWardList = await axios.get(
+    "https://partner.viettelpost.vn/v2/categories/listWards?districtId=1",
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.API_TOKEN}`,
+      },
+    }
+  );
   return json({
     order: responseJson?.data?.order,
     shop: session?.shop?.replace(".myshopify.com", ""),
     provinceResponse: provinceRes?.data,
+    firstDisList: firstDisList?.data,
+    firstWardList: firstWardList?.data,
   });
 };
 
 export async function action({ request, params }) {
   const body = await request.formData();
-  const token = body.get("token");
+  const token = body.get("token") || "no token";
 
-  if (token) {
+  if (token !== "no token" && token !== "undefined") {
     const _action = body.get("_action");
     let inventory = body.get("inventory");
     if (inventory !== "Nhập thủ công") {
@@ -368,47 +388,38 @@ export async function action({ request, params }) {
           });
         }
       case "GET_SENDER":
-        const listInventoryRes = await axios.get(
-          "https://partner.viettelpost.vn/v2/user/listInventory",
-          {
-            headers: {
-              token: token,
-              accept: "*/*",
-              Authorization: `Bearer ${process.env.API_TOKEN}`,
-            },
-          }
+        try {
+          const listInventoryRes = await axios.get(
+            "https://partner.viettelpost.vn/v2/user/listInventory",
+            {
+              headers: {
+                token: token,
+                accept: "*/*",
+                Authorization: `Bearer ${process.env.API_TOKEN}`,
+              },
+            }
+          );
+          return {
+            action: "GET_SENDER",
+            data: listInventoryRes?.data,
+          };
+        } catch (err) {
+          return "get sender failed";
+        }
+      case "GET_RECIEVERDISTRICTS":
+        const responseDistrictR = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${receiveProvince}`
+        );
+
+        const resWardsTempR = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${responseDistrictR?.data?.data[0]?.DISTRICT_ID}`
         );
         return {
-          action: "GET_SENDER",
-          data: listInventoryRes?.data,
-        };
-      case "GET_RECIEVERDISTRICTS":
-        async function getWardsTempR(disId) {
-          const resWardsTempR = await axios.get(
-            `https://partner.viettelpost.vn/v2/categories/listWards?districtId=121}`
-          );
-          return resWardsTempR;
-        }
-        const responseDistrictR = await axios
-          .get(
-            `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${receiveProvince}`
-          )
-          .then((res) => {
-            const temp = getWardsTempR();
-            return {
-              res: res,
-              temp: temp,
-            };
-          });
-        return {
           action: "GET_RECIEVERDISTRICTS",
-          data: responseDistrictR.res.data,
-          tempW: responseDistrictR.temp,
+          data: responseDistrictR.data,
+          tempWards: resWardsTempR.data,
         };
-      // return {
-      //   action: "GET_RECIEVERDISTRICTS",
-      //   data: responseDistrictR.data
-      // };
+
       case "GET_RECIEVERWARDS":
         const responseWardR = await axios.get(
           `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${receiveDistrict}`
@@ -422,9 +433,14 @@ export async function action({ request, params }) {
         const responseDistrictS = await axios.get(
           `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${senderProvince}`
         );
+        const resWardsTempS = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${responseDistrictS?.data?.data[0].DISTRICT_ID}`
+        );
+
         return {
           action: "GET_SENDERDISTRICTS",
           data: responseDistrictS.data,
+          tempWards: resWardsTempS.data,
         };
       case "GET_SENDERWARDS":
         const responseWardS = await axios.get(
@@ -446,21 +462,25 @@ export async function action({ request, params }) {
 export default function CreateViettelPost() {
   const navigate = useNavigate();
 
-  // loading ss
-
   const [isLoadingGetSender, setIsLoadingGetSender] = useState(false);
   const [isLoadingCheckServices, setIsLoadingCheckServices] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
-  const checkToken = localStorage.getItem("token") || "";
-  if (!checkToken || checkToken === "undefined") {
-    navigate("/app/login");
-  }
+  var checkToken = "";
+  // if (!checkToken || checkToken == "undefined") {
+  //   navigate("/app/login");
+  // }
+  useEffect(() => {
+    // Perform localStorage action
+    checkToken = localStorage.getItem("token") || "";
+  }, []);
   const dataAction = useActionData();
   const submit = useSubmit();
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(checkToken);
 
   const shopOrdersData = useLoaderData();
+
+  // console.log("loaderData--->", shopOrdersData);
 
   let inventoryList = [];
   const [selectedInventory, setSelectedInventory] = useState("");
@@ -482,7 +502,6 @@ export default function CreateViettelPost() {
   );
 
   const provinceData = shopOrdersData.provinceResponse;
-  // console.log("ds Tỉnh==>", provinceData.data);
   const [senderEmail, setSenderEmail] = useState(
     shopOrdersData.order.email || ""
   );
@@ -494,17 +513,52 @@ export default function CreateViettelPost() {
   const [receiveSoNha, setReceiveSoNha] = useState("");
 
   const [selectedProvinceSender, setSelectedProvinceSender] = useState("1");
-  const [selectedDistrictSender, setSelectedDistrictSender] = useState("1100");
-  const [optionsDistrictSender, setOptionsDistrictSender] = useState([]);
-  const [selectedWardSender, setSelectedWardSender] = useState("1");
-  const [optionsWardSender, setOptionsWardSender] = useState([]);
+  const [selectedDistrictSender, setSelectedDistrictSender] = useState(
+    shopOrdersData?.firstDisList?.data[0]?.DISTRICT_ID.toString()
+  );
+  const [optionsDistrictSender, setOptionsDistrictSender] = useState(
+    shopOrdersData?.firstDisList?.data?.map((value) => {
+      return {
+        label: value?.DISTRICT_NAME,
+        value: value?.DISTRICT_ID.toString(),
+      };
+    })
+  );
+  const [selectedWardSender, setSelectedWardSender] = useState(
+    shopOrdersData?.firstWardList?.data[0]?.WARDS_ID.toString()
+  );
+  const [optionsWardSender, setOptionsWardSender] = useState(
+    shopOrdersData?.firstWardList?.data?.map((value) => {
+      return {
+        label: value?.WARDS_NAME,
+        value: value?.WARDS_ID.toString(),
+      };
+    })
+  );
 
   const [selectedProvinceReceive, setSelectedProvinceReceive] = useState("1");
-  const [selectedDistrictReceive, setSelectedDistrictReceive] =
-    useState("1100");
-  const [optionsDistrictReceive, setOptionsDistrictReceive] = useState([]);
-  const [selectedWardReceive, setSelectedWardReceive] = useState("1");
-  const [optionsWardReceive, setOptionsWardReceive] = useState([]);
+  const [selectedDistrictReceive, setSelectedDistrictReceive] = useState(
+    shopOrdersData?.firstDisList?.data[0]?.DISTRICT_ID.toString()
+  );
+  const [optionsDistrictReceive, setOptionsDistrictReceive] = useState(
+    shopOrdersData?.firstDisList?.data?.map((value) => {
+      return {
+        label: value?.DISTRICT_NAME,
+        value: value?.DISTRICT_ID.toString(),
+      };
+    })
+  );
+  const [selectedWardReceive, setSelectedWardReceive] = useState(
+    shopOrdersData?.firstWardList?.data[0]?.WARDS_ID.toString()
+  );
+  const [optionsWardReceive, setOptionsWardReceive] = useState(
+    shopOrdersData?.firstWardList?.data?.map((value) => {
+      return {
+        label: value?.WARDS_NAME,
+        value: value?.WARDS_ID.toString(),
+      };
+    })
+  );
 
   const [optionsCollection] = useState([
     {
@@ -569,126 +623,157 @@ export default function CreateViettelPost() {
   );
 
   useEffect(() => {
-    console.log("Action data nè: ====?", dataAction);
+    console.log("Action data: ==>", dataAction);
     setActionForm("");
     if (dataAction) {
       if (dataAction === "no token") {
         navigate("/app/login");
       } else {
-        if (dataAction.action === "GET_SERVICE") {
-          setIsLoadingCheckServices(false);
-          if (dataAction?.data?.error) {
-            alert(dataAction?.data?.message);
-          } else {
-            setOptionsServiceMatch(
-              dataAction?.data?.map((s) => {
+        switch (dataAction?.action) {
+          case "GET_SERVICE":
+            setIsLoadingCheckServices(false);
+            if (dataAction?.data?.error) {
+              alert(dataAction?.data?.message);
+            } else {
+              setOptionsServiceMatch(
+                dataAction?.data?.map((s) => {
+                  return {
+                    label: s?.TEN_DICHVU,
+                    value: s?.MA_DV_CHINH,
+                  };
+                })
+              );
+            }
+            break;
+          case "CHECK_PRICES":
+            setIsLoadingPrices(false);
+            if (dataAction?.data?.error) {
+              alert(dataAction?.data?.message);
+            } else {
+              setPricesEstimate(dataAction?.data?.data);
+            }
+            break;
+          case "CREATE_ORDER":
+            if (dataAction?.data?.error) {
+              alert(dataAction?.data?.message);
+            } else {
+              alert(
+                `Tạo đơn #${dataAction?.data?.data?.ORDER_NUMBER} Thành Công!!!`
+              );
+              navigate("/app");
+            }
+            break;
+          case "GET_SENDER":
+            if (!dataAction?.data?.error) {
+              let invenTemp = dataAction?.data.data?.map((value) => {
                 return {
-                  label: s?.TEN_DICHVU,
-                  value: s?.MA_DV_CHINH,
+                  label: `${value.name} - ${value.address} - ${value.phone}`,
+                  value: JSON.stringify(value),
                 };
-              })
-            );
-          }
-        }
-        if (dataAction.action === "CHECK_PRICES") {
-          setIsLoadingPrices(false);
-          if (dataAction?.data?.error) {
-            alert(dataAction?.data?.message);
-          } else {
-            setPricesEstimate(dataAction?.data?.data);
-          }
-        }
-        if (dataAction.action === "CREATE_ORDER") {
-          if (dataAction?.data?.error) {
-            alert(dataAction?.data?.message);
-          } else {
-            alert(
-              `Tạo đơn #${dataAction?.data?.data?.ORDER_NUMBER} Thành Công!!!`
-            );
-            navigate("/app");
-          }
-        }
-        if (dataAction.action === "GET_SENDER") {
-          let invenTemp = dataAction?.data.data?.map((value) => {
-            return {
-              label: `${value.name} - ${value.address} - ${value.phone}`,
-              value: JSON.stringify(value),
-            };
-          });
-          invenTemp = [
-            ...invenTemp,
-            {
-              label: "Nhập thủ công",
-              value: "Nhập thủ công",
-            },
-          ];
-          setIsLoadingGetSender(false);
-          setOptionsInventory(invenTemp);
-          console.log("inven in use==>", invenTemp);
-        }
-        if (dataAction.action === "GET_RECIEVERDISTRICTS") {
-          if (!dataAction.data.error) {
-            setOptionsDistrictReceive(
-              dataAction.data.data?.map((value) => {
-                return {
-                  label: value.DISTRICT_NAME,
-                  value: value.DISTRICT_ID.toString(),
-                };
-              })
-            );
-            setOptionsWardReceive(
-              dataAction?.tempW?.data?.map((value) => {
-                return {
-                  label: value.WARDS_NAME,
-                  value: value.WARDS_ID.toString(),
-                };
-              })
-            );
-          } else {
-            console.log(dataAction.data.message);
-          }
-        }
-        if (dataAction?.action === "GET_RECIEVERWARDS") {
-          if (!dataAction?.data?.error) {
-            setOptionsWardReceive(
-              dataAction?.data?.data?.map((value) => {
-                return {
-                  label: value.WARDS_NAME,
-                  value: value.WARDS_ID.toString(),
-                };
-              })
-            );
-          } else {
-            console.log(dataAction.data.message);
-          }
-        }
-        if (dataAction.action === "GET_SENDERDISTRICTS") {
-          if (!dataAction.data.error) {
-            setOptionsDistrictSender(
-              dataAction.data.data?.map((value) => {
-                return {
-                  label: value.DISTRICT_NAME,
-                  value: value.DISTRICT_ID.toString(),
-                };
-              })
-            );
-          } else {
-            console.log(dataAction.data.message);
-          }
-        }
-        if (dataAction?.action === "GET_SENDERWARDS") {
-          if (!dataAction?.data?.error) {
-            setOptionsWardSender(
-              dataAction?.data?.data?.map((value) => {
-                return {
-                  label: value.WARDS_NAME,
-                  value: value.WARDS_ID.toString(),
-                };
-              })
-            );
-          } else {
-            console.log(dataAction.data.message);
-          }
+              });
+              invenTemp = [
+                ...invenTemp,
+                {
+                  label: "Nhập thủ công",
+                  value: "Nhập thủ công",
+                },
+              ];
+              setIsLoadingGetSender(false);
+              setOptionsInventory(invenTemp);
+            } else {
+              setIsLoadingGetSender(false);
+            }
+            break;
+          case "GET_RECIEVERDISTRICTS":
+            if (!dataAction.data.error) {
+              setOptionsDistrictReceive(
+                dataAction.data.data?.map((value) => {
+                  return {
+                    label: value.DISTRICT_NAME,
+                    value: value.DISTRICT_ID.toString(),
+                  };
+                })
+              );
+              setOptionsWardReceive(
+                dataAction?.tempWards?.data?.map((value) => {
+                  return {
+                    label: value.WARDS_NAME,
+                    value: value.WARDS_ID.toString(),
+                  };
+                })
+              );
+              setSelectedDistrictReceive(
+                dataAction?.data?.data[0]?.DISTRICT_ID.toString()
+              );
+              setSelectedWardReceive(
+                dataAction?.tempWards?.data[0]?.WARDS_ID.toString()
+              );
+            } else {
+              console.log(dataAction.data.message);
+            }
+            break;
+          case "GET_RECIEVERWARDS":
+            if (!dataAction?.data?.error) {
+              setOptionsWardReceive(
+                dataAction?.data?.data?.map((value) => {
+                  return {
+                    label: value.WARDS_NAME,
+                    value: value.WARDS_ID.toString(),
+                  };
+                })
+              );
+              setSelectedWardReceive(
+                dataAction?.data?.data[0]?.WARDS_ID.toString()
+              );
+            } else {
+              console.log(dataAction.data.message);
+            }
+            break;
+          case "GET_SENDERDISTRICTS":
+            if (!dataAction.data.error) {
+              setOptionsDistrictSender(
+                dataAction.data.data?.map((value) => {
+                  return {
+                    label: value.DISTRICT_NAME,
+                    value: value.DISTRICT_ID.toString(),
+                  };
+                })
+              );
+              setOptionsWardSender(
+                dataAction?.tempWards?.data?.map((value) => {
+                  return {
+                    label: value.WARDS_NAME,
+                    value: value.WARDS_ID.toString(),
+                  };
+                })
+              );
+              setSelectedDistrictSender(
+                dataAction?.data?.data[0]?.DISTRICT_ID.toString()
+              );
+              setSelectedWardSender(
+                dataAction?.tempWards?.data[0]?.WARDS_ID.toString()
+              );
+            } else {
+              console.log(dataAction.data.message);
+            }
+            break;
+          case "GET_SENDERWARDS":
+            if (!dataAction?.data?.error) {
+              setOptionsWardSender(
+                dataAction?.data?.data?.map((value) => {
+                  return {
+                    label: value.WARDS_NAME,
+                    value: value.WARDS_ID.toString(),
+                  };
+                })
+              );
+              setSelectedWardSender(
+                dataAction?.data?.data[0]?.WARDS_ID.toString()
+              );
+            } else {
+              console.log(dataAction.data.message);
+            }
+            break;
         }
       }
     }
@@ -740,9 +825,9 @@ export default function CreateViettelPost() {
     console.log("value: " + value);
     setSelectedInventory(value);
   }, []);
-  // console.log("opt", optionsProvince);
+
   const [orders, setOrders] = useState(shopOrdersData.order);
-  console.log("order==>", orders);
+  // console.log("order==>", orders);
   const params = useParams();
   const orderId = params.orderId;
 
@@ -768,6 +853,7 @@ export default function CreateViettelPost() {
   useEffect(() => {
     console.log("inven xử lý", selectedInventory);
   }, [selectedInventory]);
+
   // console.log("date post==>", {
   //   ORDER_NUMBER: params.orderId,
   //   GROUPADDRESS_ID: 0,
@@ -851,11 +937,16 @@ export default function CreateViettelPost() {
               method="post"
               onBlur={(e) => {
                 e.preventDefault();
-                submit(e.currentTarget);
+                setToken(localStorage.getItem("token") || "");
+                if (token === "undefined" || !token) {
+                  // navigate("/app/login");
+                } else {
+                  submit(e.currentTarget);
+                }
               }}
             >
-              <input type="text" name="_action" value={actionForm} />
-              <input type="text" name="token" value={token} />
+              <input type="hidden" name="_action" value={actionForm} />
+              <input type="hidden" name="token" value={token} />
               <FormLayout>
                 <Button
                   plain

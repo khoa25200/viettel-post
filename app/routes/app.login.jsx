@@ -10,7 +10,6 @@ import {
   Spinner,
 } from "@shopify/polaris";
 import { useEffect, useState, useCallback } from "react";
-
 import axios from "axios";
 import {
   Form,
@@ -58,6 +57,7 @@ export default function Login() {
     } else {
       localStorage.setItem("token", loginResponse?.data?.token);
       localStorage.setItem("phoneNumber", loginResponse?.data?.phone);
+
       setFailMes("");
       const localToken = localStorage.getItem("token") || "";
       const localPhoneNumber = localStorage.getItem("phoneNumber") || "";
@@ -67,7 +67,7 @@ export default function Login() {
       ) {
         // alert("Đăng nhập thành công !!!!");
         setIsLoadingLogin(false);
-        setFailMes("Đăng nhập thành công!!! Đang điều hướng...")
+        setFailMes("Đăng nhập thành công!!! Đang điều hướng...");
         navigate("/app");
       }
       // navigate("/app");
