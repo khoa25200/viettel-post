@@ -185,7 +185,7 @@ export default function Index() {
     // console.log("action data: " + actionData?.orders);
     if (actionData?.orders) {
       setOrders(actionData?.orders);
-      console.log("khoa==>", orders);
+      console.log("shopify orders==>", orders);
       setIsLoadingReload(false);
     }
     if (actionData?.print) {

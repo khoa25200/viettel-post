@@ -13,6 +13,10 @@ import {
   Select,
   RadioButton,
   Divider,
+  Autocomplete,
+  Icon,
+  Checkbox,
+  Banner,
 } from "@shopify/polaris";
 import {
   useParams,
@@ -25,9 +29,9 @@ import {
   useFetcher,
 } from "@remix-run/react";
 import { apiVersion, authenticate } from "../shopify.server";
-
+import { SearchMinor } from "@shopify/polaris-icons";
 import { json, redirect } from "@remix-run/node";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
 export const loader = async ({ request, params }) => {
@@ -146,59 +150,118 @@ export async function action({ request, params }) {
     const totalQuantity = body.get("totalQuantity");
     const totalWeight = body.get("totalWeight");
     const totalPrice = body.get("totalPrice");
-    const productCollectionPrice = body.get("productCollectionPrice");
     const serviceMatch = body.get("serviceMatch");
     const productNote = body.get("productNote");
     const productMainName = body.get("productMainName");
     const productMainDes = body.get("productMainDes");
     const collectionOptions = body.get("collectionOptions");
+    const orderTypeAdd = body.get("orderTypeAdd");
+    const productCollectionPrice =
+      collectionOptions === 1 ? 0 : body.get("productCollectionPrice");
 
     const listProductsItem = JSON.parse(body.get("listProductsItem"));
     switch (_action) {
       case "CHECK_SERVICE":
-        const responseServiceList = await axios.post(
-          `https://partner.viettelpost.vn/v2/order/getPriceAll`,
-          {
-            SENDER_DISTRICT:
-              inventory === "Nhập thủ công"
-                ? senderDistrict
-                : inventory?.districtId,
-            SENDER_PROVINCE:
-              inventory === "Nhập thủ công"
-                ? senderProvince
-                : inventory?.provinceId,
-            RECEIVER_DISTRICT: receiveProvince,
-            RECEIVER_PROVINCE: receiveDistrict,
-            PRODUCT_TYPE: valueProductType,
-            PRODUCT_WEIGHT: totalWeight,
-            PRODUCT_PRICE: totalPrice,
-            MONEY_COLLECTION: productCollectionPrice,
-            PRODUCT_LENGTH: productLength,
-            PRODUCT_WIDTH: productWidth,
-            PRODUCT_HEIGHT: productHeight,
-            TYPE: 1,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Token: token,
+        if (!senderProvince && !inventory?.provinceId) {
+          return {
+            action: "GET_SERVICE",
+            data: {
+              error: true,
+              message: "Thiếu Tỉnh/Thành Phố của người nhận",
             },
-          }
-        );
-
-        return {
-          action: "GET_SERVICE",
-          data: responseServiceList?.data,
+          };
+        }
+        if (!senderDistrict && !inventory?.districtId) {
+          return {
+            action: "GET_SERVICE",
+            data: {
+              error: true,
+              message: "Thiếu Quận/Huyện của người nhận",
+            },
+          };
+        }
+        const payloadCheckService = {
+          SENDER_DISTRICT:
+            inventory === "Nhập thủ công"
+              ? senderDistrict
+              : inventory?.districtId,
+          SENDER_PROVINCE:
+            inventory === "Nhập thủ công"
+              ? senderProvince
+              : inventory?.provinceId,
+          RECEIVER_DISTRICT: receiveDistrict,
+          RECEIVER_PROVINCE: receiveProvince,
+          PRODUCT_TYPE: valueProductType,
+          PRODUCT_WEIGHT: totalWeight,
+          PRODUCT_PRICE: totalPrice,
+          MONEY_COLLECTION: productCollectionPrice,
+          PRODUCT_LENGTH: productLength,
+          PRODUCT_WIDTH: productWidth,
+          PRODUCT_HEIGHT: productHeight,
+          TYPE: 1,
         };
+        try {
+          const responseServiceList = await axios.post(
+            `https://partner.viettelpost.vn/v2/order/getPriceAll`,
+            payloadCheckService,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Token: token,
+              },
+            }
+          );
+          return {
+            action: "GET_SERVICE",
+            data: responseServiceList?.data,
+            payloadCheckService: payloadCheckService,
+          };
+        } catch (error) {
+          return {
+            action: "GET_SERVICE",
+            data: {
+              error: true,
+              message: "Requested checkservice Error!!!",
+            },
+          };
+        }
+
       case "CHECK_PRICES":
-        const responsePricesEstimate = await axios.post(
-          `https://partner.viettelpost.vn/v2/order/getPrice`,
-          {
+        if (!senderProvince && !inventory?.provinceId) {
+          return {
+            action: "CHECK_PRICES",
+            data: {
+              error: true,
+              message: "Thiếu Tỉnh/Thành Phố của người nhận",
+            },
+          };
+        }
+        if (!senderDistrict && !inventory?.districtId) {
+          return {
+            action: "CHECK_PRICES",
+            data: {
+              error: true,
+              message: "Thiếu Quận/Huyện của người nhận",
+            },
+          };
+        }
+        if (!serviceMatch) {
+          return {
+            action: "CHECK_PRICES",
+            data: {
+              error: true,
+              message: "Chưa chọn dịch vụ cho hành trình",
+            },
+          };
+        }
+        try {
+          const checkPricePayload = {
             PRODUCT_WEIGHT: totalWeight,
             PRODUCT_PRICE: totalPrice,
             MONEY_COLLECTION: productCollectionPrice,
-            ORDER_SERVICE_ADD: "",
+            ORDER_SERVICE_ADD: orderTypeAdd,
             ORDER_SERVICE: serviceMatch,
+            // ORDER_TYPE_ADD: orderTypeAdd,
             SENDER_DISTRICT:
               inventory === "Nhập thủ công"
                 ? senderDistrict
@@ -214,19 +277,59 @@ export async function action({ request, params }) {
             PRODUCT_HEIGHT: productHeight,
             PRODUCT_TYPE: valueProductType,
             NATIONAL_TYPE: 1,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Token: token,
+          };
+          const responsePricesEstimate = await axios.post(
+            `https://partner.viettelpost.vn/v2/order/getPrice`,
+            checkPricePayload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Token: token,
+              },
+            }
+          );
+          return {
+            action: "CHECK_PRICES",
+            checkPricePayload: checkPricePayload,
+            data: responsePricesEstimate.data,
+          };
+        } catch (error) {
+          return {
+            action: "CHECK_PRICES",
+            data: {
+              error: true,
+              message: "Requested prices Error!!!",
             },
-          }
-        );
-        return {
-          action: "CHECK_PRICES",
-          data: responsePricesEstimate.data,
-        };
+          };
+        }
       case "CREATE_ORDER":
+        if (!senderProvince && !inventory?.provinceId) {
+          return {
+            action: "CREATE_ORDER",
+            data: {
+              error: true,
+              message: "Thiếu Tỉnh/Thành Phố của người nhận",
+            },
+          };
+        }
+        if (!senderDistrict && !inventory?.districtId) {
+          return {
+            action: "CREATE_ORDER",
+            data: {
+              error: true,
+              message: "Thiếu Quận/Huyện của người nhận",
+            },
+          };
+        }
+        if (!serviceMatch) {
+          return {
+            action: "CREATE_ORDER",
+            data: {
+              error: true,
+              message: "Chưa chọn dịch vụ cho hành trình",
+            },
+          };
+        }
         // Tạo đơn
         function formatDateTime(dateTime) {
           const day = dateTime.getDate();
@@ -240,6 +343,8 @@ export async function action({ request, params }) {
 
           return formattedDate;
         }
+
+        // validations
 
         // let rawData = {
         //   ORDER_NUMBER: "12",
@@ -341,7 +446,8 @@ export async function action({ request, params }) {
           PRODUCT_TYPE: valueProductType,
           ORDER_PAYMENT: Number(collectionOptions),
           ORDER_SERVICE: serviceMatch,
-          ORDER_SERVICE_ADD: "",
+          ORDER_SERVICE_ADD: orderTypeAdd,
+          // ORDER_TYPE_ADD: orderTypeAdd,
           ORDER_VOUCHER: "",
           ORDER_NOTE: productNote,
           MONEY_COLLECTION: productCollectionPrice,
@@ -357,36 +463,60 @@ export async function action({ request, params }) {
         };
 
         const { admin } = await authenticate.admin(request);
-        let responseAllSuccess = {};
-        const dataAction = await axios.post(
-          "https://partner.viettelpost.vn/v2/order/createOrder",
-          rawData,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.API_TOKEN}`,
-              token: token,
-            },
-          }
-        );
         try {
-          createMetafield(params.orderId, dataAction?.data?.data?.ORDER_NUMBER);
-          responseAllSuccess = dataAction.data;
-        } catch (err) {}
-        return { action: "CREATE_ORDER", data: responseAllSuccess };
-        async function createMetafield(orderId, newValue) {
-          await admin.rest.post({
-            path: `/orders/${orderId}/metafields.json`,
-            data: {
-              metafield: {
-                namespace: "custom",
-                key: "viettelPostTrackingId",
-                type: "single_line_text_field",
-                value: newValue,
+          let responseAllSuccess = {};
+
+          const dataAction = await axios.post(
+            "https://partner.viettelpost.vn/v2/order/createOrder",
+            rawData,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.API_TOKEN}`,
+                token: token,
               },
+            }
+          );
+          if (dataAction.data.error) {
+            return {
+              action: "CREATE_ORDER",
+              data: dataAction.data,
+            };
+          } else {
+            createMetafield(
+              params.orderId,
+              dataAction?.data?.data?.ORDER_NUMBER
+            );
+            responseAllSuccess = dataAction.data;
+            async function createMetafield(orderId, newValue) {
+              await admin.rest.post({
+                path: `/orders/${orderId}/metafields.json`,
+                data: {
+                  metafield: {
+                    namespace: "custom",
+                    key: "viettelPostTrackingId",
+                    type: "single_line_text_field",
+                    value: newValue,
+                  },
+                },
+              });
+            }
+            return {
+              action: "CREATE_ORDER",
+              data: responseAllSuccess,
+              payload: rawData,
+            };
+          }
+        } catch (err) {
+          return {
+            action: "CREATE_ORDER",
+            data: {
+              error: true,
+              message: "Requested create order Error!!!",
             },
-          });
+          };
         }
+
       case "GET_SENDER":
         try {
           const listInventoryRes = await axios.get(
@@ -404,7 +534,13 @@ export async function action({ request, params }) {
             data: listInventoryRes?.data,
           };
         } catch (err) {
-          return "get sender failed";
+          return {
+            action: "GET_SENDER",
+            data: {
+              error: true,
+              message: "request get sender error",
+            },
+          };
         }
       case "GET_RECIEVERDISTRICTS":
         const responseDistrictR = await axios.get(
@@ -460,6 +596,32 @@ export async function action({ request, params }) {
 }
 
 export default function CreateViettelPost() {
+  const compareLabels = (a, b) => {
+    const labelA = a.label.toLowerCase(); // Chuyển đổi về chữ hoa để so sánh không phân biệt hoa/thường
+    const labelB = b.label.toLowerCase();
+
+    if (labelA < labelB) {
+      return -1;
+    }
+    if (labelA > labelB) {
+      return 1;
+    }
+    return 0;
+  };
+  const capitalizeFirstLetter = (inputString) => {
+    if (typeof inputString !== "string" || inputString.length === 0) {
+      return ""; // Trả về chuỗi rỗng nếu đầu vào không hợp lệ
+    }
+    const words = inputString.split(" ");
+    const titleCasedWords = words.map((word) => {
+      if (word.length > 0) {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      }
+      return word;
+    });
+
+    return titleCasedWords.join(" ");
+  };
   const navigate = useNavigate();
 
   const [isLoadingGetSender, setIsLoadingGetSender] = useState(false);
@@ -502,15 +664,24 @@ export default function CreateViettelPost() {
   );
 
   const provinceData = shopOrdersData.provinceResponse;
-  const [senderEmail, setSenderEmail] = useState(
-    shopOrdersData.order.email || ""
-  );
+  const optionsProvince = provinceData.data?.map((value) => {
+    return {
+      label: value.PROVINCE_NAME,
+      value: value.PROVINCE_ID.toString(),
+    };
+  });
+  const [senderEmail, setSenderEmail] = useState("nvs@navitec.co");
   const [receiveEmail, setReceiveEmail] = useState(
-    shopOrdersData?.order?.customer?.defaultAddress?.email || ""
+    shopOrdersData?.order?.email ||
+      shopOrdersData?.order?.customer?.defaultAddress?.email ||
+      ""
   );
 
   const [senderSoNha, setSenderSoNha] = useState("");
-  const [receiveSoNha, setReceiveSoNha] = useState("");
+  const [receiveSoNha, setReceiveSoNha] = useState(
+    shopOrdersData?.order?.customer?.defaultAddress?.address1.split(", ")[0] ||
+      ""
+  );
 
   const [selectedProvinceSender, setSelectedProvinceSender] = useState("1");
   const [selectedDistrictSender, setSelectedDistrictSender] = useState(
@@ -519,7 +690,7 @@ export default function CreateViettelPost() {
   const [optionsDistrictSender, setOptionsDistrictSender] = useState(
     shopOrdersData?.firstDisList?.data?.map((value) => {
       return {
-        label: value?.DISTRICT_NAME,
+        label: capitalizeFirstLetter(value?.DISTRICT_NAME),
         value: value?.DISTRICT_ID.toString(),
       };
     })
@@ -530,20 +701,74 @@ export default function CreateViettelPost() {
   const [optionsWardSender, setOptionsWardSender] = useState(
     shopOrdersData?.firstWardList?.data?.map((value) => {
       return {
-        label: value?.WARDS_NAME,
+        label: capitalizeFirstLetter(value?.WARDS_NAME),
         value: value?.WARDS_ID.toString(),
       };
     })
   );
-
   const [selectedProvinceReceive, setSelectedProvinceReceive] = useState("1");
+
+  // // select v2
+  // const deselectedOptions = useMemo(() => optionsProvince, []);
+  // const [selectedOptions, setSelectedOptions] = useState([]);
+  // const [inputValue, setInputValue] = useState(optionsProvince[0]?.label);
+  // const [options, setOptions] = useState(deselectedOptions);
+
+  // const updateText = useCallback(
+  //   (value) => {
+  //     setInputValue(value);
+
+  //     if (value === "") {
+  //       setOptions(deselectedOptions);
+  //       return;
+  //     }
+
+  //     const filterRegex = new RegExp(value, "i");
+  //     const resultOptions = deselectedOptions.filter((option) =>
+  //       option.label.match(filterRegex)
+  //     );
+  //     setOptions(resultOptions);
+  //   },
+  //   [deselectedOptions]
+  // );
+
+  // const updateSelection = useCallback(
+  //   (selected) => {
+  //     const selectedValue = selected.map((selectedItem) => {
+  //       const matchedOption = options.find((option) => {
+  //         return option.value.match(selectedItem);
+  //       });
+  //       return matchedOption && matchedOption.label;
+  //     });
+  //     // setSelectedProvinceReceive()
+  //     setSelectedOptions(selected);
+  //     setInputValue(selectedValue[0] || "");
+  //   },
+  //   [options]
+  // );
+
+  // useEffect(() => {
+  //   // setSelectedProvinceReceive(selectedOptions[0]);
+  //   console.log("value-->", selectedOptions[0]);
+  // }, [selectedOptions[0]]);
+  // const textField = (
+  //   <Autocomplete.TextField
+  //     onChange={updateText}
+  //     label="Thành Phố/Tỉnh"
+  //     value={inputValue}
+  //     // prefix={<Icon source={SearchMinor} color="base" />}
+  //     placeholder="Thành phố/Tỉnh"
+  //     autoComplete="off"
+  //   />
+  // );
+
   const [selectedDistrictReceive, setSelectedDistrictReceive] = useState(
     shopOrdersData?.firstDisList?.data[0]?.DISTRICT_ID.toString()
   );
   const [optionsDistrictReceive, setOptionsDistrictReceive] = useState(
     shopOrdersData?.firstDisList?.data?.map((value) => {
       return {
-        label: value?.DISTRICT_NAME,
+        label: capitalizeFirstLetter(value?.DISTRICT_NAME),
         value: value?.DISTRICT_ID.toString(),
       };
     })
@@ -554,7 +779,7 @@ export default function CreateViettelPost() {
   const [optionsWardReceive, setOptionsWardReceive] = useState(
     shopOrdersData?.firstWardList?.data?.map((value) => {
       return {
-        label: value?.WARDS_NAME,
+        label: capitalizeFirstLetter(value?.WARDS_NAME),
         value: value?.WARDS_ID.toString(),
       };
     })
@@ -584,8 +809,8 @@ export default function CreateViettelPost() {
 
   const [listProductsItem, setListProductsItem] = useState([
     {
-      name: "",
-      quan: 0,
+      name: `Hàng theo toa ${shopOrdersData?.order?.name}`,
+      quan: 1,
       weight: 0,
       price: 0,
     },
@@ -593,9 +818,9 @@ export default function CreateViettelPost() {
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [totalWeight, setTotalWeight] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [totalLength, setTotalLength] = useState("");
-  const [totalWidth, setTotalWidth] = useState("");
-  const [totalHeight, setTotalHeight] = useState("");
+  const [totalLength, setTotalLength] = useState("0");
+  const [totalWidth, setTotalWidth] = useState("0");
+  const [totalHeight, setTotalHeight] = useState("0");
   const [{ month, year }, setDate] = useState({
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -614,6 +839,7 @@ export default function CreateViettelPost() {
 
   const [selectedServiceMatch, setSelectedServiceMatch] = useState();
   const [optionsServiceMatch, setOptionsServiceMatch] = useState([]);
+  const [optionsServiceMatchTemp, setOptionsServiceMatchTemp] = useState([]);
 
   const [pricesEstimate, setPricesEstimate] = useState({});
 
@@ -621,7 +847,63 @@ export default function CreateViettelPost() {
     (month, year) => setDate({ month, year }),
     []
   );
+  const initOrderTypeAddHH = [
+    {
+      label: "Giá trị cao",
+      value: "HGC",
+      isChecked: false,
+    },
+    {
+      label: "Dễ vỡ",
+      value: "HDV",
+      isChecked: false,
+    },
+    {
+      label: "Nguyên khối",
+      value: "HNK",
+      isChecked: false,
+    },
+    {
+      label: "Quá khổ",
+      value: "HQK",
+      isChecked: false,
+    },
+    {
+      label: "Chất Lỏng",
+      value: "HCL",
+      isChecked: false,
+    },
+    {
+      label: "Từ tính, Pin",
+      value: "HPN",
+      isChecked: false,
+    },
+    {
+      label: "Hàng lạnh",
+      value: "HLH",
+      isChecked: false,
+    },
+  ];
 
+  const initOrderTypeAddTH = [
+    {
+      label: "Giá trị cao",
+      value: "HGC",
+      isChecked: false,
+    },
+    {
+      label: "Hóa đơn, Giấy chứng nhận",
+      value: "HDN",
+      isChecked: false,
+    },
+    {
+      label: "Hồ sơ thầu",
+      value: "HST",
+      isChecked: false,
+    },
+  ];
+  const [orderTypeAdd, setOrdersTypeAdd] = useState(initOrderTypeAddHH);
+  const [valueTypeAdd, setValueTypeAdd] = useState("");
   useEffect(() => {
     console.log("Action data: ==>", dataAction);
     setActionForm("");
@@ -632,6 +914,8 @@ export default function CreateViettelPost() {
         switch (dataAction?.action) {
           case "GET_SERVICE":
             setIsLoadingCheckServices(false);
+            setIsLoadingPrices(false);
+
             if (dataAction?.data?.error) {
               alert(dataAction?.data?.message);
             } else {
@@ -643,11 +927,13 @@ export default function CreateViettelPost() {
                   };
                 })
               );
+              setOptionsServiceMatchTemp(dataAction?.data);
             }
             break;
           case "CHECK_PRICES":
             setIsLoadingPrices(false);
             if (dataAction?.data?.error) {
+              setIsLoadingPrices(false);
               alert(dataAction?.data?.message);
             } else {
               setPricesEstimate(dataAction?.data?.data);
@@ -689,7 +975,7 @@ export default function CreateViettelPost() {
               setOptionsDistrictReceive(
                 dataAction.data.data?.map((value) => {
                   return {
-                    label: value.DISTRICT_NAME,
+                    label: capitalizeFirstLetter(value.DISTRICT_NAME),
                     value: value.DISTRICT_ID.toString(),
                   };
                 })
@@ -697,7 +983,7 @@ export default function CreateViettelPost() {
               setOptionsWardReceive(
                 dataAction?.tempWards?.data?.map((value) => {
                   return {
-                    label: value.WARDS_NAME,
+                    label: capitalizeFirstLetter(value.WARDS_NAME),
                     value: value.WARDS_ID.toString(),
                   };
                 })
@@ -717,7 +1003,7 @@ export default function CreateViettelPost() {
               setOptionsWardReceive(
                 dataAction?.data?.data?.map((value) => {
                   return {
-                    label: value.WARDS_NAME,
+                    label: capitalizeFirstLetter(value.WARDS_NAME),
                     value: value.WARDS_ID.toString(),
                   };
                 })
@@ -734,7 +1020,7 @@ export default function CreateViettelPost() {
               setOptionsDistrictSender(
                 dataAction.data.data?.map((value) => {
                   return {
-                    label: value.DISTRICT_NAME,
+                    label: capitalizeFirstLetter(value.DISTRICT_NAME),
                     value: value.DISTRICT_ID.toString(),
                   };
                 })
@@ -742,7 +1028,7 @@ export default function CreateViettelPost() {
               setOptionsWardSender(
                 dataAction?.tempWards?.data?.map((value) => {
                   return {
-                    label: value.WARDS_NAME,
+                    label: capitalizeFirstLetter(value.WARDS_NAME),
                     value: value.WARDS_ID.toString(),
                   };
                 })
@@ -762,7 +1048,7 @@ export default function CreateViettelPost() {
               setOptionsWardSender(
                 dataAction?.data?.data?.map((value) => {
                   return {
-                    label: value.WARDS_NAME,
+                    label: capitalizeFirstLetter(value.WARDS_NAME),
                     value: value.WARDS_ID.toString(),
                   };
                 })
@@ -811,16 +1097,10 @@ export default function CreateViettelPost() {
     (value) => setSelectedServiceMatch(value),
     []
   );
-  const handleSelectChangeCollection = useCallback(
-    (value) => setSelectedCollection(value),
-    []
-  );
-  const optionsProvince = provinceData.data?.map((value) => {
-    return {
-      label: value.PROVINCE_NAME,
-      value: value.PROVINCE_ID.toString(),
-    };
-  });
+  const handleSelectChangeCollection = useCallback((value) => {
+    setSelectedCollection(value);
+  }, []);
+
   const handleSelectChangeInventory = useCallback((value) => {
     console.log("value: " + value);
     setSelectedInventory(value);
@@ -831,10 +1111,15 @@ export default function CreateViettelPost() {
   const params = useParams();
   const orderId = params.orderId;
 
-  const handleChangeProductType = useCallback(
-    (_, newValue) => setValueProductType(newValue),
-    []
-  );
+  const handleChangeProductType = useCallback((_, newValue) => {
+    setValueProductType(newValue);
+    if (newValue === "buukien") {
+      setOrdersTypeAdd(initOrderTypeAddHH);
+      console.log("chec2k==>", newValue);
+    } else {
+      setOrdersTypeAdd(initOrderTypeAddTH);
+    }
+  }, []);
 
   useEffect(() => {
     let totalQuan = 0;
@@ -951,10 +1236,11 @@ export default function CreateViettelPost() {
                 <Button
                   plain
                   textAlign="left"
-                  url={`https://admin.shopify.com/store/${shopOrdersData.shop}/orders/${orderId}`}
+                  url={`https://admin.shopify.com/store/${shopOrdersData?.shop}/orders/${orderId}`}
                   target="_blank"
                 >
-                  Edit order: #{orderId} --- Name: {shopOrdersData.order.name}📝
+                  Edit order: #{orderId} --- Name: {shopOrdersData?.order?.name}
+                  📝
                 </Button>
                 <TextField
                   label="Shopify Order .No:"
@@ -963,8 +1249,8 @@ export default function CreateViettelPost() {
                   autoComplete="off"
                 />
                 <b>NGƯỜI GỬI:</b>
-
                 <Button
+                  primary
                   submit
                   loading={isLoadingGetSender}
                   onClick={() => {
@@ -976,13 +1262,13 @@ export default function CreateViettelPost() {
                   Lấy danh sách người gửi
                 </Button>
                 <Select
+                  requiredIndicator
                   label=""
                   name="inventory"
                   options={optionsInventory}
                   onChange={handleSelectChangeInventory}
                   value={selectedInventory}
                 />
-
                 {selectedInventory === "Nhập thủ công" ? (
                   <FormLayout.Group>
                     <FormLayout.Group>
@@ -996,6 +1282,7 @@ export default function CreateViettelPost() {
                         autoComplete="off"
                       />
                       <TextField
+                        requiredIndicator
                         label="Số điện thoại người gửi:"
                         value={senderPhone}
                         name="senderPhone"
@@ -1020,23 +1307,27 @@ export default function CreateViettelPost() {
                       <FormLayout.Group>
                         <i>Địa chỉ người gửi:</i>
                         <Select
+                          requiredIndicator
                           label="Thành Phố/Tỉnh:"
-                          options={optionsProvince}
+                          options={optionsProvince.sort(compareLabels)}
                           name="senderProvince"
                           onChange={handleSelectChangeProvinceSender}
                           value={selectedProvinceSender}
                         />
+
                         <Select
+                          requiredIndicator
                           label="Quận/Huyện:"
-                          options={optionsDistrictSender}
+                          options={optionsDistrictSender.sort(compareLabels)}
                           name="senderDistrict"
                           onChange={handleSelectChangeDistrictSender}
                           value={selectedDistrictSender}
                         />
                         <Select
+                          requiredIndicator
                           label="Phường/Xã:"
                           name="senderWard"
-                          options={optionsWardSender}
+                          options={optionsWardSender.sort(compareLabels)}
                           onChange={handleSelectChangeWardSender}
                           value={selectedWardSender}
                         />
@@ -1084,13 +1375,12 @@ export default function CreateViettelPost() {
                     />
                   </FormLayout.Group>
                 )}
-
-                <hr />
+                <Divider />
                 <b>NGƯỜI NHẬN:</b>
-
                 <FormLayout.Group>
                   <FormLayout.Group>
                     <TextField
+                      requiredIndicator
                       label="Tên Người Nhận:"
                       name="receiveName"
                       value={receiveName}
@@ -1100,6 +1390,7 @@ export default function CreateViettelPost() {
                       autoComplete="off"
                     />
                     <TextField
+                      requiredIndicator
                       label="Số điện thoại người nhận:"
                       value={receivePhone}
                       name="receivePhone"
@@ -1204,24 +1495,34 @@ export default function CreateViettelPost() {
                   <Card>
                     <FormLayout.Group>
                       <label>Địa chỉ người nhận:</label>
+                      {/* 
+                      <Autocomplete
+                        options={options}
+                        selected={selectedOptions}
+                        onSelect={updateSelection}
+                        textField={textField}
+                      /> */}
                       <Select
                         label="Thành Phố/Tỉnh:"
-                        options={optionsProvince}
+                        requiredIndicator
+                        options={optionsProvince.sort(compareLabels)}
                         name="receiveProvince"
                         onChange={handleSelectChangeProvinceReceive}
                         value={selectedProvinceReceive}
                       />
                       <Select
                         label="Quận/Huyện:"
-                        options={optionsDistrictReceive}
+                        requiredIndicator
+                        options={optionsDistrictReceive.sort(compareLabels)}
                         name="receiveDistrict"
                         onChange={handleSelectChangeDistrictReceive}
                         value={selectedDistrictReceive}
                       />
                       <Select
+                        requiredIndicator
                         label="Phường/Xã:"
                         name="receiveWard"
-                        options={optionsWardReceive}
+                        options={optionsWardReceive.sort(compareLabels)}
                         onChange={handleSelectChangeWardReceive}
                         value={selectedWardReceive}
                       />
@@ -1255,8 +1556,8 @@ export default function CreateViettelPost() {
                     </FormLayout.Group>
                   </Card>
                 </FormLayout.Group>
-
-                <label>Chọn thời gian giao hàng dự kiến:</label>
+                <Divider />
+                <b>THỜI GIAN GIAO HÀNG DỰ KIẾN:</b>
                 <DatePicker
                   month={month}
                   year={year}
@@ -1264,9 +1565,8 @@ export default function CreateViettelPost() {
                   onMonthChange={handleMonthChangeDeliveryExpectation}
                   selected={selectedDates}
                 />
-                <hr />
-
-                <b>Sản phẩm:</b>
+                <Divider />
+                <b>SẢN PHẨM:</b>
                 <FormLayout.Group>
                   {/* <FormLayout.Group> */}
                   <label>Loại sản phẩm:</label>
@@ -1291,13 +1591,14 @@ export default function CreateViettelPost() {
                   />
                 </FormLayout.Group>
                 <Divider />
-                <label>Items:</label>
+                <i>Danh mục sản phẩm:</i>
                 {listProductsItem?.map((product, index) => {
                   return (
                     <div key={index}>
                       <Card>
                         <FormLayout.Group title={`#Sản phẩm ${index + 1}:`}>
                           <TextField
+                            requiredIndicator
                             label={`Tên hàng hóa:`}
                             placeholder="Tên hàng hóa"
                             value={product?.name}
@@ -1310,6 +1611,7 @@ export default function CreateViettelPost() {
                           />
                           <FormLayout.Group>
                             <TextField
+                              requiredIndicator
                               label={`Số lượng:`}
                               placeholder=""
                               type="number"
@@ -1373,8 +1675,10 @@ export default function CreateViettelPost() {
                     let temp = [
                       ...listProductsItem,
                       {
-                        name: "",
-                        quan: 0,
+                        name: `Hàng theo toa ${
+                          shopOrdersData?.order?.name
+                        } (Sản phẩm ${listProductsItem?.length + 1})`,
+                        quan: 1,
                         weight: 0,
                         price: 0,
                       },
@@ -1386,7 +1690,7 @@ export default function CreateViettelPost() {
                   + Thêm Hàng Hóa
                 </Button>
                 <Divider />
-                <label>Sản phẩm:</label>
+                <b>Sản phẩm:</b>
                 <FormLayout.Group>
                   <TextField
                     label="Tổng Số lượng:"
@@ -1410,7 +1714,6 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                 </FormLayout.Group>
-
                 <FormLayout.Group>
                   <TextField
                     disabled
@@ -1463,6 +1766,7 @@ export default function CreateViettelPost() {
                   />
                 </FormLayout.Group>
                 <Select
+                  requiredIndicator
                   label="Thu hộ:"
                   options={optionsCollection}
                   name="collectionOptions"
@@ -1482,7 +1786,12 @@ export default function CreateViettelPost() {
                   />
                   <TextField
                     label="Tiền Thu Hộ:"
-                    value={productCollectionPrice.toString()}
+                    disabled={selectedCollection === "1"}
+                    value={
+                      selectedCollection === "1"
+                        ? "0"
+                        : productCollectionPrice.toString()
+                    }
                     onChange={(value) => {
                       setProductCollectionPrice(Number(value));
                     }}
@@ -1492,6 +1801,7 @@ export default function CreateViettelPost() {
                 </FormLayout.Group>
                 <Divider />
                 <Button
+                  primary
                   submit
                   size="slim"
                   loading={isLoadingCheckServices}
@@ -1510,8 +1820,51 @@ export default function CreateViettelPost() {
                   value={selectedServiceMatch}
                   name="serviceMatch"
                 />
+                {/* Dịch vụ thêm */}
+                {selectedServiceMatch && (
+                  <Banner
+                    title={`Thời gian giao hàng: ${
+                      optionsServiceMatchTemp.find(
+                        (value) => value?.MA_DV_CHINH == selectedServiceMatch
+                      )?.THOI_GIAN
+                    }`}
+                    status="info"
+                  />
+                )}
+                <Divider />
+                <b>Chọn loại hàng hóa:</b>
+                <Card>
+                  <FormLayout.Group>
+                    {orderTypeAdd?.map((value, index) => {
+                      return (
+                        <Checkbox
+                          key={index}
+                          label={value.label}
+                          checked={value.isChecked}
+                          onChange={(e) => {
+                            let tempOrderTypeAdd = [...orderTypeAdd];
+                            tempOrderTypeAdd[index].isChecked = e;
+                            setOrdersTypeAdd(tempOrderTypeAdd);
+                            const selectedItems = tempOrderTypeAdd.filter(
+                              (item) => item.isChecked === true
+                            );
+                            setValueTypeAdd(
+                              selectedItems.map((item) => item.value).join(",")
+                            );
+                          }}
+                        />
+                      );
+                    })}
+                  </FormLayout.Group>
+                  <input
+                    type="hidden"
+                    name="orderTypeAdd"
+                    value={valueTypeAdd}
+                  />
+                </Card>
                 <Card roundedAbove="md" background="bg-subdued">
                   <Button
+                    primary
                     size="slim"
                     loading={isLoadingPrices}
                     submit
@@ -1525,87 +1878,91 @@ export default function CreateViettelPost() {
                   </Button>
                   <br />
                   <br />
-                  <Text variant="headingMd" as="h6">
-                    Chi Phí Ước Tính:
-                  </Text>
+                  {pricesEstimate?.MONEY_TOTAL && (
+                    <>
+                      <Text variant="headingMd" as="h6">
+                        Chi Phí Ước Tính:
+                      </Text>
 
-                  <FormLayout.Group>
-                    <List type="bullet">
-                      <List.Item>
-                        <Text variant="headingMd" as="h6">
-                          Tổng cước:{" "}
-                          <span style={{ color: "green" }}>
+                      <FormLayout.Group>
+                        <List type="bullet">
+                          <List.Item>
+                            <Text variant="headingMd" as="h6">
+                              Tổng cước:{" "}
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.MONEY_TOTAL + " đ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                          <List.Item>
                             {" "}
-                            {pricesEstimate?.MONEY_TOTAL + " đ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                      <List.Item>
-                        {" "}
-                        <Text variant="headingMd" as="h6">
-                          Cước dịch vụ chính:
-                          <span style={{ color: "green" }}>
-                            {" "}
-                            {pricesEstimate?.MONEY_TOTAL_FEE + " đ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                      <List.Item>
-                        <Text variant="headingMd" as="h6">
-                          Phụ phí xăng dầu:
-                          <span style={{ color: "green" }}>
-                            {" "}
-                            {pricesEstimate?.MONEY_FEE + " đ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                      <List.Item>
-                        <Text variant="headingMd" as="h6">
-                          Phụ phí thu hộ:
-                          <span style={{ color: "green" }}>
-                            {" "}
-                            {pricesEstimate?.MONEY_COLLECTION_FEE + " đ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                    </List>
-                    <List type="bullet">
-                      <List.Item>
-                        <Text variant="headingMd" as="h6">
-                          Tổng thời gian giao hàng cam kết:
-                          <span style={{ color: "green" }}>
-                            {" "}
-                            {pricesEstimate?.KPI_HT + " giờ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                      <List.Item>
-                        <Text variant="headingMd" as="h6">
-                          Phụ phí khác:
-                          <span style={{ color: "green" }}>
-                            {" "}
-                            {pricesEstimate?.MONEY_OTHER_FEE + " đ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                      <List.Item>
-                        <Text variant="headingMd" as="h6">
-                          Thuế giá trị gia tăng:
-                          <span style={{ color: "green" }}>
-                            {" "}
-                            {pricesEstimate?.MONEY_VAT + " đ" ||
-                              "Chưa đủ thông tin"}
-                          </span>
-                        </Text>
-                      </List.Item>
-                    </List>
-                  </FormLayout.Group>
+                            <Text variant="headingMd" as="h6">
+                              Cước dịch vụ chính:
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.MONEY_TOTAL_FEE + " đ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                          <List.Item>
+                            <Text variant="headingMd" as="h6">
+                              Phụ phí xăng dầu:
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.MONEY_FEE + " đ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                          <List.Item>
+                            <Text variant="headingMd" as="h6">
+                              Phụ phí thu hộ:
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.MONEY_COLLECTION_FEE + " đ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                        </List>
+                        <List type="bullet">
+                          <List.Item>
+                            <Text variant="headingMd" as="h6">
+                              Tổng thời gian giao hàng cam kết:
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.KPI_HT + " giờ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                          <List.Item>
+                            <Text variant="headingMd" as="h6">
+                              Phụ phí khác:
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.MONEY_OTHER_FEE + " đ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                          <List.Item>
+                            <Text variant="headingMd" as="h6">
+                              Thuế giá trị gia tăng:
+                              <span style={{ color: "green" }}>
+                                {" "}
+                                {pricesEstimate?.MONEY_VAT + " đ" ||
+                                  "Chưa đủ thông tin"}
+                              </span>
+                            </Text>
+                          </List.Item>
+                        </List>
+                      </FormLayout.Group>
+                    </>
+                  )}
                 </Card>
                 <Button
                   submit

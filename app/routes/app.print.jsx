@@ -32,6 +32,7 @@ import {
   LegacyCard,
   Badge,
   Grid,
+  Banner,
 } from "@shopify/polaris";
 
 import { authenticate } from "../shopify.server";
@@ -149,7 +150,7 @@ export default function Index() {
           target="_blank"
           url={`https://admin.shopify.com/store/${printData?.shop}/orders/${id}`}
         >
-          Back to order
+          Trở về trang Order
         </Button>
       }
     >
@@ -177,7 +178,7 @@ export default function Index() {
                   <input name="token" type="hidden" value={token} />
                   <input name="trackingId" type="hidden" value={tracking} />
                   <Button loading={isLoading} submit onClick={getLinkPrint}>
-                    🖨️ Get link print
+                    🖨️ Nhấn để lấy link In
                   </Button>
                 </Form>
               </div>
@@ -218,7 +219,12 @@ export default function Index() {
         </>
       ) : (
         <>
-          <Button url={`/app/viettel/${id}`}>Create Order</Button>
+          <Banner
+            title="Bạn chưa tạo đơn Viettel Post"
+            status="info"
+          />
+          <br />
+          <Button primarySuccess url={`/app/viettel/${id}`} >Nhấn để tạo</Button>
         </>
       )}
     </Page>
