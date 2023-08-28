@@ -5,7 +5,6 @@ import {
   List,
   Page,
   Text,
-  VerticalStack,
   FormLayout,
   TextField,
   Button,
@@ -13,7 +12,6 @@ import {
   Select,
   RadioButton,
   Divider,
-  Autocomplete,
   Icon,
   Checkbox,
   Banner,
@@ -29,7 +27,6 @@ import {
   useFetcher,
 } from "@remix-run/react";
 import { apiVersion, authenticate } from "../shopify.server";
-import { SearchMinor } from "@shopify/polaris-icons";
 import { json, redirect } from "@remix-run/node";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
@@ -154,10 +151,10 @@ export async function action({ request, params }) {
     const productNote = body.get("productNote");
     const productMainName = body.get("productMainName");
     const productMainDes = body.get("productMainDes");
-    const collectionOptions = body.get("collectionOptions");
+    const collectionOptions = body.get("tracuocInput");
     const orderTypeAdd = body.get("orderTypeAdd");
     const productCollectionPrice =
-      collectionOptions === 1 ? 0 : body.get("productCollectionPrice");
+      collectionOptions === "1" ? 0 : body.get("productCollectionPrice");
 
     const listProductsItem = JSON.parse(body.get("listProductsItem"));
     switch (_action) {
@@ -787,25 +784,35 @@ export default function CreateViettelPost() {
 
   const [optionsCollection] = useState([
     {
-      label: "Không thu hộ",
+      label: "Không thu hộ tiền hàng",
       value: (1).toString(),
     },
     {
-      label: "Thu hộ tiền hàng và tiền cước",
+      label: "Thu hộ tiền hàng",
       value: (2).toString(),
     },
-    {
-      label: "Thu hộ tiền hàng",
-      value: (3).toString(),
-    },
-    {
-      label: "Thu hộ tiền cước",
-      value: (4).toString(),
-    },
   ]);
-  const [selectedCollection, setSelectedCollection] = useState("3");
+  const [selectedCollection, setSelectedCollection] = useState("1");
 
   const [valueProductType, setValueProductType] = useState("buukien");
+  const [valueTraCuoc, setValueTraCuoc] = useState("nguoinhantracuoc");
+
+  const [collectionOptionsFinal, setCollectionOptionsFinal] = useState("4");
+
+  useEffect(() => {
+    if (valueTraCuoc === "nguoinhantracuoc" && selectedCollection === "1") {
+      setCollectionOptionsFinal("4");
+    }
+    if (valueTraCuoc === "nguoinhantracuoc" && selectedCollection === "2") {
+      setCollectionOptionsFinal("2");
+    }
+    if (valueTraCuoc === "nguoiguitracuoc" && selectedCollection === "1") {
+      setCollectionOptionsFinal("1");
+    }
+    if (valueTraCuoc === "nguoiguitracuoc" && selectedCollection === "2") {
+      setCollectionOptionsFinal("3");
+    }
+  }, [valueTraCuoc, selectedCollection]);
 
   const [listProductsItem, setListProductsItem] = useState([
     {
@@ -1120,6 +1127,10 @@ export default function CreateViettelPost() {
       setOrdersTypeAdd(initOrderTypeAddTH);
     }
   }, []);
+  const handleChangeTraCuoc = useCallback(
+    (_, newValue) => setValueTraCuoc(newValue),
+    []
+  );
 
   useEffect(() => {
     let totalQuan = 0;
@@ -1735,6 +1746,7 @@ export default function CreateViettelPost() {
                 </FormLayout.Group>
                 <FormLayout.Group title="Kích thước:">
                   <TextField
+                    requiredIndicator
                     label="Dài:"
                     placeholder="Dài(cm)"
                     value={totalLength}
@@ -1745,6 +1757,7 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                   <TextField
+                    requiredIndicator
                     label="Rộng:"
                     placeholder="Rộng(cm)"
                     value={totalWidth}
@@ -1755,6 +1768,7 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                   <TextField
+                    requiredIndicator
                     label="Cao:"
                     placeholder="Cao(cm)"
                     value={totalHeight}
@@ -1862,6 +1876,31 @@ export default function CreateViettelPost() {
                     value={valueTypeAdd}
                   />
                 </Card>
+                <Divider />
+                <FormLayout.Group>
+                  <b>NGƯỜI TRẢ CƯỚC:</b>
+                  <RadioButton
+                    label="Người nhận trả cước"
+                    checked={valueTraCuoc === "nguoinhantracuoc"}
+                    id="nguoinhantracuoc"
+                    name="tracuocradio"
+                    onChange={handleChangeTraCuoc}
+                  />
+                  <RadioButton
+                    label="Người gửi trả cước"
+                    id="nguoiguitracuoc"
+                    name="tracuocradio"
+                    checked={valueTraCuoc === "nguoiguitracuoc"}
+                    onChange={handleChangeTraCuoc}
+                  />
+                </FormLayout.Group>
+                <input
+                  type="hidden"
+                  name="tracuocInput"
+                  value={collectionOptionsFinal}
+                />
+                <Divider />
+
                 <Card roundedAbove="md" background="bg-subdued">
                   <Button
                     primary
