@@ -405,7 +405,7 @@ export async function action({ request, params }) {
           GROUPADDRESS_ID:
             inventory === "Nhập thủ công" ? 0 : inventory?.groupaddressId,
           CUS_ID: inventory === "Nhập thủ công" ? "" : inventory?.cusId,
-          DELIVERY_DATE: formatDateTime(new Date()),
+          // DELIVERY_DATE: formatDateTime(new Date()),
           SENDER_FULLNAME:
             inventory === "Nhập thủ công" ? senderName : inventory?.name,
           SENDER_ADDRESS: senderFullAdress,
@@ -1284,7 +1284,11 @@ export default function CreateViettelPost() {
                   <FormLayout.Group>
                     <FormLayout.Group>
                       <TextField
-                        label="Tên Người Gửi:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Tên Người Gửi:
+                          </span>
+                        }
                         value={senderName}
                         name="senderName"
                         onChange={(value) => {
@@ -1294,7 +1298,11 @@ export default function CreateViettelPost() {
                       />
                       <TextField
                         requiredIndicator
-                        label="Số điện thoại người gửi:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Số điện thoại người gửi:
+                          </span>
+                        }
                         value={senderPhone}
                         name="senderPhone"
                         type="tel"
@@ -1304,7 +1312,11 @@ export default function CreateViettelPost() {
                         autoComplete="off"
                       />
                       <TextField
-                        label="Email người gửi:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Email người gửi:
+                          </span>
+                        }
                         value={senderEmail}
                         name="senderEmail"
                         type="email"
@@ -1316,10 +1328,16 @@ export default function CreateViettelPost() {
                     </FormLayout.Group>
                     <Card>
                       <FormLayout.Group>
-                        <i>Địa chỉ người gửi:</i>
+                        <b>
+                          <i>Địa chỉ người gửi:</i>
+                        </b>
                         <Select
                           requiredIndicator
-                          label="Thành Phố/Tỉnh:"
+                          label={
+                            <span style={{ fontWeight: "bold" }}>
+                              Thành Phố/Tỉnh:
+                            </span>
+                          }
                           options={optionsProvince.sort(compareLabels)}
                           name="senderProvince"
                           onChange={handleSelectChangeProvinceSender}
@@ -1328,7 +1346,11 @@ export default function CreateViettelPost() {
 
                         <Select
                           requiredIndicator
-                          label="Quận/Huyện:"
+                          label={
+                            <span style={{ fontWeight: "bold" }}>
+                              Quận/Huyện:
+                            </span>
+                          }
                           options={optionsDistrictSender.sort(compareLabels)}
                           name="senderDistrict"
                           onChange={handleSelectChangeDistrictSender}
@@ -1336,14 +1358,22 @@ export default function CreateViettelPost() {
                         />
                         <Select
                           requiredIndicator
-                          label="Phường/Xã:"
+                          label={
+                            <span style={{ fontWeight: "bold" }}>
+                              Phường/Xã:
+                            </span>
+                          }
                           name="senderWard"
                           options={optionsWardSender.sort(compareLabels)}
                           onChange={handleSelectChangeWardSender}
                           value={selectedWardSender}
                         />
                         <TextField
-                          label="Số Nhà, Tên Đường:"
+                          label={
+                            <span style={{ fontWeight: "bold" }}>
+                              Số Nhà, Tên Đường:
+                            </span>
+                          }
                           value={senderSoNha}
                           onChange={(value) => {
                             setSenderSoNha(value);
@@ -1352,7 +1382,11 @@ export default function CreateViettelPost() {
                         />
                         <TextField
                           readOnly
-                          label="Địa chỉ tự động:"
+                          label={
+                            <span style={{ fontWeight: "bold" }}>
+                              Địa chỉ tự động:
+                            </span>
+                          }
                           value={`${senderSoNha ? senderSoNha + "," : ""} ${
                             optionsWardSender?.find(
                               (w) => w?.value == selectedWardSender
@@ -1375,7 +1409,11 @@ export default function CreateViettelPost() {
                 ) : (
                   <FormLayout.Group>
                     <TextField
-                      label="Email người gửi:"
+                      label={
+                        <span style={{ fontWeight: "bold" }}>
+                          Email người gửi:
+                        </span>
+                      }
                       value={senderEmail}
                       name="senderEmail"
                       type="email"
@@ -1392,7 +1430,11 @@ export default function CreateViettelPost() {
                   <FormLayout.Group>
                     <TextField
                       requiredIndicator
-                      label="Tên Người Nhận:"
+                      label={
+                        <span style={{ fontWeight: "bold" }}>
+                          Tên Người Nhận:
+                        </span>
+                      }
                       name="receiveName"
                       value={receiveName}
                       onChange={(value) => {
@@ -1402,7 +1444,11 @@ export default function CreateViettelPost() {
                     />
                     <TextField
                       requiredIndicator
-                      label="Số điện thoại người nhận:"
+                      label={
+                        <span style={{ fontWeight: "bold" }}>
+                          Số điện thoại người nhận:
+                        </span>
+                      }
                       value={receivePhone}
                       name="receivePhone"
                       type="tel"
@@ -1412,7 +1458,11 @@ export default function CreateViettelPost() {
                       autoComplete="off"
                     />
                     <TextField
-                      label="Email người nhận:"
+                      label={
+                        <span style={{ fontWeight: "bold" }}>
+                          Email người nhận:
+                        </span>
+                      }
                       value={receiveEmail}
                       name="receiveEmail"
                       type="email"
@@ -1505,7 +1555,9 @@ export default function CreateViettelPost() {
                   </FormLayout.Group>
                   <Card>
                     <FormLayout.Group>
-                      <label>Địa chỉ người nhận:</label>
+                      <b>
+                        <label>Địa chỉ người nhận:</label>
+                      </b>
                       {/* 
                       <Autocomplete
                         options={options}
@@ -1514,7 +1566,11 @@ export default function CreateViettelPost() {
                         textField={textField}
                       /> */}
                       <Select
-                        label="Thành Phố/Tỉnh:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Thành Phố/Tỉnh:
+                          </span>
+                        }
                         requiredIndicator
                         options={optionsProvince.sort(compareLabels)}
                         name="receiveProvince"
@@ -1522,7 +1578,11 @@ export default function CreateViettelPost() {
                         value={selectedProvinceReceive}
                       />
                       <Select
-                        label="Quận/Huyện:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Quận/Huyện:
+                          </span>
+                        }
                         requiredIndicator
                         options={optionsDistrictReceive.sort(compareLabels)}
                         name="receiveDistrict"
@@ -1531,14 +1591,20 @@ export default function CreateViettelPost() {
                       />
                       <Select
                         requiredIndicator
-                        label="Phường/Xã:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>Phường/Xã:</span>
+                        }
                         name="receiveWard"
                         options={optionsWardReceive.sort(compareLabels)}
                         onChange={handleSelectChangeWardReceive}
                         value={selectedWardReceive}
                       />
                       <TextField
-                        label="Số Nhà, Tên Đường:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Số Nhà, Tên Đường:
+                          </span>
+                        }
                         value={receiveSoNha}
                         onChange={(value) => {
                           setReceiveSoNha(value);
@@ -1547,7 +1613,11 @@ export default function CreateViettelPost() {
                       />
                       <TextField
                         readOnly
-                        label="Địa chỉ tự động:"
+                        label={
+                          <span style={{ fontWeight: "bold" }}>
+                            Địa chỉ tự động:
+                          </span>
+                        }
                         value={`${receiveSoNha ? receiveSoNha + "," : ""} ${
                           optionsWardReceive?.find(
                             (w) => w?.value == selectedWardReceive
@@ -1568,7 +1638,7 @@ export default function CreateViettelPost() {
                   </Card>
                 </FormLayout.Group>
                 <Divider />
-                <b>THỜI GIAN GIAO HÀNG DỰ KIẾN:</b>
+                {/* <b>THỜI GIAN GIAO HÀNG DỰ KIẾN:</b>
                 <DatePicker
                   month={month}
                   year={year}
@@ -1576,11 +1646,13 @@ export default function CreateViettelPost() {
                   onMonthChange={handleMonthChangeDeliveryExpectation}
                   selected={selectedDates}
                 />
-                <Divider />
+                <Divider /> */}
                 <b>SẢN PHẨM:</b>
                 <FormLayout.Group>
                   {/* <FormLayout.Group> */}
-                  <label>Loại sản phẩm:</label>
+                  <b>
+                    <label>Loại sản phẩm:</label>
+                  </b>
                   <RadioButton
                     label="Bưu kiện"
                     checked={valueProductType === "buukien"}
@@ -1602,7 +1674,9 @@ export default function CreateViettelPost() {
                   />
                 </FormLayout.Group>
                 <Divider />
-                <i>Danh mục sản phẩm:</i>
+                <b>
+                  <i>Danh mục sản phẩm:</i>
+                </b>
                 {listProductsItem?.map((product, index) => {
                   return (
                     <div key={index}>
@@ -1610,7 +1684,11 @@ export default function CreateViettelPost() {
                         <FormLayout.Group title={`#Sản phẩm ${index + 1}:`}>
                           <TextField
                             requiredIndicator
-                            label={`Tên hàng hóa:`}
+                            label={
+                              <span style={{ fontWeight: "bold" }}>
+                                Tên hàng hóa:
+                              </span>
+                            }
                             placeholder="Tên hàng hóa"
                             value={product?.name}
                             onChange={(value) => {
@@ -1623,7 +1701,11 @@ export default function CreateViettelPost() {
                           <FormLayout.Group>
                             <TextField
                               requiredIndicator
-                              label={`Số lượng:`}
+                              label={
+                                <span style={{ fontWeight: "bold" }}>
+                                  Số lượng:
+                                </span>
+                              }
                               placeholder=""
                               type="number"
                               value={product?.quan.toString()}
@@ -1635,7 +1717,11 @@ export default function CreateViettelPost() {
                               autoComplete="off"
                             />
                             <TextField
-                              label={`Khối lượng(g):`}
+                              label={
+                                <span style={{ fontWeight: "bold" }}>
+                                  Khối lượng(g):
+                                </span>
+                              }
                               placeholder="g"
                               type="number"
                               value={product?.weight.toString()}
@@ -1647,7 +1733,11 @@ export default function CreateViettelPost() {
                               autoComplete="off"
                             />
                             <TextField
-                              label={`Giá trị(VNĐ):`}
+                              label={
+                                <span style={{ fontWeight: "bold" }}>
+                                  Giá trị(VNĐ):
+                                </span>
+                              }
                               placeholder="đ"
                               type="number"
                               value={product?.price.toString()}
@@ -1704,21 +1794,29 @@ export default function CreateViettelPost() {
                 <b>Sản phẩm:</b>
                 <FormLayout.Group>
                   <TextField
-                    label="Tổng Số lượng:"
+                    label={
+                      <span style={{ fontWeight: "bold" }}>Tổng Số lượng:</span>
+                    }
                     value={totalQuantity.toString()}
                     name="totalQuantity"
                     readOnly
                     autoComplete="off"
                   />
                   <TextField
-                    label="Tổng Khối Lượng:"
+                    label={
+                      <span style={{ fontWeight: "bold" }}>
+                        Tổng Khối Lượng:
+                      </span>
+                    }
                     value={totalWeight.toString()}
                     readOnly
                     name="totalWeight"
                     autoComplete="off"
                   />
                   <TextField
-                    label="Tổng Giá:"
+                    label={
+                      <span style={{ fontWeight: "bold" }}>Tổng Giá:</span>
+                    }
                     value={totalPrice.toString()}
                     name="totalPrice"
                     readOnly
@@ -1728,7 +1826,9 @@ export default function CreateViettelPost() {
                 <FormLayout.Group>
                   <TextField
                     disabled
-                    label="Tên Đơn Hàng:"
+                    label={
+                      <span style={{ fontWeight: "bold" }}>Tên Đơn Hàng:</span>
+                    }
                     value={listProductsItem[0]?.name || productMainName}
                     onChange={(value) => {
                       setProductMainName(value);
@@ -1736,7 +1836,7 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                   <TextField
-                    label="Mô Tả:"
+                    label={<span style={{ fontWeight: "bold" }}>Mô Tả:</span>}
                     value={productMainDes}
                     onChange={(value) => {
                       setProductMainDes(value);
@@ -1744,10 +1844,12 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                 </FormLayout.Group>
-                <FormLayout.Group title="Kích thước:">
+                <FormLayout.Group title="">
+                  {/* <div><b>{"Kích thước:"}</b></div> */}
+                  {/* <br /> */}
                   <TextField
                     requiredIndicator
-                    label="Dài:"
+                    label={<span style={{ fontWeight: "bold" }}>Dài:</span>}
                     placeholder="Dài(cm)"
                     value={totalLength}
                     onChange={(value) => {
@@ -1758,7 +1860,7 @@ export default function CreateViettelPost() {
                   />
                   <TextField
                     requiredIndicator
-                    label="Rộng:"
+                    label={<span style={{ fontWeight: "bold" }}>Rộng:</span>}
                     placeholder="Rộng(cm)"
                     value={totalWidth}
                     onChange={(value) => {
@@ -1769,7 +1871,7 @@ export default function CreateViettelPost() {
                   />
                   <TextField
                     requiredIndicator
-                    label="Cao:"
+                    label={<span style={{ fontWeight: "bold" }}>Cao:</span>}
                     placeholder="Cao(cm)"
                     value={totalHeight}
                     onChange={(value) => {
@@ -1781,7 +1883,7 @@ export default function CreateViettelPost() {
                 </FormLayout.Group>
                 <Select
                   requiredIndicator
-                  label="Thu hộ:"
+                  label={<b>Thu hộ:</b>}
                   options={optionsCollection}
                   name="collectionOptions"
                   onChange={handleSelectChangeCollection}
@@ -1790,7 +1892,7 @@ export default function CreateViettelPost() {
                 <Divider />
                 <FormLayout.Group>
                   <TextField
-                    label="Ghi Chú:"
+                    label={<span style={{ fontWeight: "bold" }}>Ghi Chú:</span>}
                     value={productMainNote}
                     onChange={(value) => {
                       setProductMainNote(value);
@@ -1799,7 +1901,9 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                   <TextField
-                    label="Tiền Thu Hộ:"
+                    label={
+                      <span style={{ fontWeight: "bold" }}>Tiền Thu Hộ:</span>
+                    }
                     disabled={selectedCollection === "1"}
                     value={
                       selectedCollection === "1"
@@ -1828,7 +1932,9 @@ export default function CreateViettelPost() {
                   Kiểm tra dịch vụ phù hợp
                 </Button>
                 <Select
-                  label="Dịch Vụ Phù Hợp:"
+                  label={
+                    <span style={{ fontWeight: "bold" }}>Dịch Vụ Phù Hợp:</span>
+                  }
                   options={optionsServiceMatch}
                   onChange={handleSelectChangeServiceMatch}
                   value={selectedServiceMatch}
