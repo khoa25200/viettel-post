@@ -54,6 +54,10 @@ export const loader = async ({ request, params }) => {
             displayName
             firstName
             lastName
+            metafield(key: "custom.viettelpost"){
+              id
+              value
+            }
             phone
             email
              addresses {
@@ -145,6 +149,8 @@ export async function action({ request, params }) {
     const productWidth = body.get("productWidth");
     const productHeight = body.get("productHeight");
     const totalQuantity = body.get("totalQuantity");
+    const recieverHistory = body.get("recieverHistory");
+    const customerIdRecieverHistory = body.get("customerIdRecieverHistory");
     const totalWeight = body.get("totalWeight");
     const totalPrice = body.get("totalPrice");
     const serviceMatch = body.get("serviceMatch");
@@ -484,6 +490,57 @@ export async function action({ request, params }) {
               params.orderId,
               dataAction?.data?.data?.ORDER_NUMBER
             );
+            let dataMetadataCusHis = "";
+            let testData = JSON.parse(recieverHistory);
+            // if (recieverHistory === "[]") {
+            //   dataMetadataCusHis = JSON.stringify([
+            //     {
+            //       id: 1,
+            //       name: receiveName,
+            //       phone: receivePhone,
+            //       email: receiveEmail,
+            //       provinceId: receiveProvince,
+            //       districtId: receiveDistrict,
+            //       wardId: receiveWard,
+            //       adddressExtra: receiveFullAddress.split(",")[0],
+            //       displayAdress: receiveFullAddress,
+            //       viettelList: dataAction?.data?.data?.ORDER_NUMBER,
+            //     }
+            //   ]);
+            // }
+            // // else {
+            const finalRedd= processObject(testData, {
+              id: JSON.parse(recieverHistory).length + 1,
+              name: receiveName,
+              phone: receivePhone,
+              email: receiveEmail,
+              provinceId: receiveProvince,
+              districtId: receiveDistrict,
+              wardId: receiveWard,
+              adddressExtra: receiveFullAddress.split(",")[0],
+              displayAdress: receiveFullAddress,
+              viettelList: [dataAction?.data?.data?.ORDER_NUMBER],
+            });
+            // dataMetadataCusHis = JSON.stringify([
+            //   ...JSON.parse(recieverHistory),
+            //   {
+            //     id: JSON.parse(recieverHistory).length + 1,
+            //     name: receiveName,
+            //     phone: receivePhone,
+            //     email: receiveEmail,
+            //     provinceId: receiveProvince,
+            //     districtId: receiveDistrict,
+            //     wardId: receiveWard,
+            //     adddressExtra: receiveFullAddress.split(",")[0],
+            //     displayAdress: receiveFullAddress,
+            //     viettelList: dataAction?.data?.data?.ORDER_NUMBER,
+            //   },
+            // ]);
+            // }
+            createMetafieldCusomer(
+              customerIdRecieverHistory,
+              JSON.stringify(finalRedd)
+            );
             responseAllSuccess = dataAction.data;
             async function createMetafield(orderId, newValue) {
               await admin.rest.post({
@@ -497,6 +554,46 @@ export async function action({ request, params }) {
                   },
                 },
               });
+            }
+            async function createMetafieldCusomer(cusId, newValue) {
+              await admin.rest.post({
+                path: `/customers/${cusId}/metafields.json`,
+                data: {
+                  metafield: {
+                    namespace: "custom",
+                    key: "viettelpost",
+                    type: "single_line_text_field",
+                    value: newValue,
+                  },
+                },
+              });
+            }
+            function processObject(inputArray, newObj) {
+              let found = false;
+              let newArr = [...inputArray]
+              inputArray.forEach((item, index) => {
+                if (
+                  item.name === newObj.name &&
+                  item.phone === newObj.phone &&
+                  item.email === newObj.email &&
+                  item.provinceId === newObj.provinceId &&
+                  item.districtId === newObj.districtId &&
+                  item.wardId === newObj.wardId &&
+                  item.adddressExtra === newObj.adddressExtra &&
+                  item.displayAdress === newObj.displayAdress
+                ) {
+                  found = true;0
+                  newArr[index].viettelList=[...inputArray.viettelList,item.viettelList]
+                  // item.viettelList=[...item.viettelList]
+                }
+              });
+
+              if (!found) {
+                const newId = inputArray.length + 1;
+                // newObj['id'] = newId;
+                newArr=[...inputArray, newObj];
+              }
+              return newArr
             }
             return {
               action: "CREATE_ORDER",
@@ -638,8 +735,12 @@ export default function CreateViettelPost() {
   const [token, setToken] = useState(checkToken);
 
   const shopOrdersData = useLoaderData();
-
-  // console.log("loaderData--->", shopOrdersData);
+  const recieverHistoryString =
+    shopOrdersData.order?.customer?.metafield?.value || "[]";
+  const [recieverHistory, setRecieverHistory] = useState(
+    JSON.parse(recieverHistoryString)
+  );
+  // console.log("recieverHistory--->", recieverHistory);
 
   let inventoryList = [];
   const [selectedInventory, setSelectedInventory] = useState("");
@@ -1114,7 +1215,7 @@ export default function CreateViettelPost() {
   }, []);
 
   const [orders, setOrders] = useState(shopOrdersData.order);
-  // console.log("order==>", orders);
+  console.log("order==>", orders);
   const params = useParams();
   const orderId = params.orderId;
 
@@ -1426,6 +1527,63 @@ export default function CreateViettelPost() {
                 )}
                 <Divider />
                 <b>NGƯỜI NHẬN:</b>
+                {recieverHistory.length > 0 ? (
+                  <Card>
+                    <Text variant="headingMd" as="h6">
+                      <Button
+                        plain
+                        textAlign="left"
+                        url={`https://admin.shopify.com/store/${
+                          shopOrdersData.shop
+                        }/customers/${
+                          shopOrdersData.order?.customer?.id.split("/")[
+                            shopOrdersData.order?.customer?.id.split("/")
+                              .length - 1
+                          ]
+                        }`}
+                        target="_blank"
+                      >
+                        #View📝
+                      </Button>
+                      <br />
+                      <br />
+                    </Text>
+
+                    <Select
+                      requiredIndicator
+                      label={
+                        <span style={{ fontWeight: "bold" }}>
+                          Gợi ý người nhận:
+                        </span>
+                      }
+                      name="inventory"
+                      options={recieverHistory.map((value) => {
+                        return {
+                          label: `${value.phone}, ${value.name}, ${value?.displayAdress}`,
+                          value: value?.id,
+                        };
+                      })}
+                      onChange={handleSelectChangeInventory}
+                      value={selectedInventory}
+                    />
+                  </Card>
+                ) : (
+                  <></>
+                )}
+                <input
+                  type="text"
+                  name="recieverHistory"
+                  value={recieverHistoryString}
+                />
+                <input
+                  type="text"
+                  name="customerIdRecieverHistory"
+                  value={
+                    shopOrdersData.order?.customer?.id.split("/")[
+                      shopOrdersData.order?.customer?.id.split("/").length - 1
+                    ] || ""
+                  }
+                />
                 <FormLayout.Group>
                   <FormLayout.Group>
                     <TextField

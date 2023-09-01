@@ -1,0 +1,17 @@
+[
+    {
+        "id": 1,
+        "name": "Nguyễn Xuân Công",
+        "phone": "+84365297944",
+        "email": "",
+        "provinceId": "1",
+        "districtId": "2",
+        "wardId": "3",
+        "adddressExtra": "4",
+        "displayAdress": "1234",
+        "viettelList": [
+            1,
+            2
+        ]
+    }
+]
