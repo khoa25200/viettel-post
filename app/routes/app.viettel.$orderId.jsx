@@ -490,26 +490,40 @@ export async function action({ request, params }) {
               params.orderId,
               dataAction?.data?.data?.ORDER_NUMBER
             );
-            let dataMetadataCusHis = "";
             let testData = JSON.parse(recieverHistory);
-            // if (recieverHistory === "[]") {
-            //   dataMetadataCusHis = JSON.stringify([
-            //     {
-            //       id: 1,
-            //       name: receiveName,
-            //       phone: receivePhone,
-            //       email: receiveEmail,
-            //       provinceId: receiveProvince,
-            //       districtId: receiveDistrict,
-            //       wardId: receiveWard,
-            //       adddressExtra: receiveFullAddress.split(",")[0],
-            //       displayAdress: receiveFullAddress,
-            //       viettelList: dataAction?.data?.data?.ORDER_NUMBER,
-            //     }
-            //   ]);
-            // }
-            // // else {
-            const finalRedd= processObject(testData, {
+
+            const processObject = (inputArray, newObj) => {
+              let found = false;
+              let newArr = [...inputArray];
+              inputArray.forEach((item, index) => {
+                if (
+                  item.name === newObj.name &&
+                  item.phone === newObj.phone &&
+                  item.email === newObj.email &&
+                  item.provinceId === newObj.provinceId &&
+                  item.districtId === newObj.districtId &&
+                  item.wardId === newObj.wardId &&
+                  item.adddressExtra === newObj.adddressExtra &&
+                  item.displayAdress === newObj.displayAdress
+                ) {
+                  found = true;
+                  // newArr = [...inputArray, newObj];
+                  newArr[index].viettelList = [
+                    ...newArr[index].viettelList,
+                    item.viettelList,
+                  ];
+                  // item.viettelList=[...item.viettelList]
+                }
+              });
+
+              if (!found) {
+                // const newId = inputArray.length + 1;
+                // newObj['id'] = newId;
+                newArr = [...inputArray, newObj];
+              }
+              return newArr;
+            };
+            const finalRedd = processObject(testData, {
               id: JSON.parse(recieverHistory).length + 1,
               name: receiveName,
               phone: receivePhone,
@@ -568,33 +582,7 @@ export async function action({ request, params }) {
                 },
               });
             }
-            function processObject(inputArray, newObj) {
-              let found = false;
-              let newArr = [...inputArray]
-              inputArray.forEach((item, index) => {
-                if (
-                  item.name === newObj.name &&
-                  item.phone === newObj.phone &&
-                  item.email === newObj.email &&
-                  item.provinceId === newObj.provinceId &&
-                  item.districtId === newObj.districtId &&
-                  item.wardId === newObj.wardId &&
-                  item.adddressExtra === newObj.adddressExtra &&
-                  item.displayAdress === newObj.displayAdress
-                ) {
-                  found = true;0
-                  newArr[index].viettelList=[...inputArray.viettelList,item.viettelList]
-                  // item.viettelList=[...item.viettelList]
-                }
-              });
 
-              if (!found) {
-                const newId = inputArray.length + 1;
-                // newObj['id'] = newId;
-                newArr=[...inputArray, newObj];
-              }
-              return newArr
-            }
             return {
               action: "CREATE_ORDER",
               data: responseAllSuccess,
@@ -740,7 +728,7 @@ export default function CreateViettelPost() {
   const [recieverHistory, setRecieverHistory] = useState(
     JSON.parse(recieverHistoryString)
   );
-  // console.log("recieverHistory--->", recieverHistory);
+  console.log("recieverHistory--->", recieverHistory);
 
   let inventoryList = [];
   const [selectedInventory, setSelectedInventory] = useState("");
@@ -1210,8 +1198,17 @@ export default function CreateViettelPost() {
   }, []);
 
   const handleSelectChangeInventory = useCallback((value) => {
-    console.log("value: " + value);
+    console.log("value: " + recieverHistory[value-1]?.name);
+    setReceiveName(recieverHistory[value-1]?.name)
+    setReceivePhone(recieverHistory[value-1]?.phone);
+    setReceiveEmail(recieverHistory[value-1]?.email);
+    setSelectedProvinceReceive(recieverHistory[value-1]?.provinceId);
+    setSelectedDistrictReceive(recieverHistory[value-1]?.districtId);
+    setSelectedWardReceive(recieverHistory[value-1]?.wardId);
+
     setSelectedInventory(value);
+    console.log("value2: " + receiveName);
+
   }, []);
 
   const [orders, setOrders] = useState(shopOrdersData.order);

@@ -2,7 +2,7 @@
 
 name = "Shopvitel"
 client_id = "0a9ac768912fd0b8af52b7dd3e7e1e88"
-application_url = "https://dear-fighters-debate-loose.trycloudflare.com"
+application_url = "https://lite-viruses-division-often.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -11,9 +11,9 @@ scopes = "read_orders,write_orders,read_customers,write_customers"
 
 [auth]
 redirect_urls = [
-  "https://dear-fighters-debate-loose.trycloudflare.com/auth/callback",
-  "https://dear-fighters-debate-loose.trycloudflare.com/auth/shopify/callback",
-  "https://dear-fighters-debate-loose.trycloudflare.com/api/auth/callback"
+  "https://lite-viruses-division-often.trycloudflare.com/auth/callback",
+  "https://lite-viruses-division-often.trycloudflare.com/auth/shopify/callback",
+  "https://lite-viruses-division-often.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
