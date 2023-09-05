@@ -39,7 +39,7 @@ export const loader = async ({ request }) => {
     `#graphql
       query {
         orders(first: 100, query:
-"name:>1400") {
+"name:>1450") {
           edges {
             node {
               note
@@ -88,7 +88,7 @@ export async function action({ request }) {
         `#graphql
         query {
           orders(first: 100, query:
-"name:>1400") {
+"name:>1450") {
             edges {
               node {
                 note
