@@ -104,7 +104,7 @@ export default function App() {
       onClose={toggleIsSecondaryMenuOpen}
       actions={[
         {
-          items: [{ content: "Community forums" }],
+          items: [{ content: "Liên hệ hỗ trợ" },],
         },
       ]}
     />

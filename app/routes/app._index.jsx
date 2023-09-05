@@ -254,7 +254,6 @@ export default function Index() {
           <Layout.Section>
             <Form method="post">
               <input type="hidden" name="_action" value={actionForm} readOnly />
-              {/* <button>Hi</button> */}
               <input
                 type="hidden"
                 name="orderVIdPrint"
@@ -270,7 +269,7 @@ export default function Index() {
                   setActionForm("RELOAD_DATA");
                 }}
               >
-                Reload Data
+                Làm mới
               </Button>
               <br />
               <br />

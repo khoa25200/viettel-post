@@ -16,6 +16,7 @@ import {
   Checkbox,
   Banner,
 } from "@shopify/polaris";
+import { CircleChevronLeftMinor, SoftPackMajor } from "@shopify/polaris-icons";
 import {
   useParams,
   Link,
@@ -90,8 +91,21 @@ export const loader = async ({ request, params }) => {
       },
     }
   );
+
+  const metaFieldCusHis =
+    responseJson?.data?.order?.customer?.metafield?.value || "[]";
+  const metaFieldCusHisJson = JSON.parse(metaFieldCusHis);
+
+  let provinceIdHis = "1";
+  let districtIdHis = "1";
+  if (metaFieldCusHisJson[0]?.provinceId) {
+    provinceIdHis = metaFieldCusHisJson[0]?.provinceId;
+  }
+  if (metaFieldCusHisJson[0]?.districtId) {
+    districtIdHis = metaFieldCusHisJson[0]?.districtId;
+  }
   const firstDisList = await axios.get(
-    "https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=1",
+    `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${provinceIdHis}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -100,7 +114,7 @@ export const loader = async ({ request, params }) => {
     }
   );
   const firstWardList = await axios.get(
-    "https://partner.viettelpost.vn/v2/categories/listWards?districtId=1",
+    `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${districtIdHis}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -159,6 +173,7 @@ export async function action({ request, params }) {
     const productMainDes = body.get("productMainDes");
     const collectionOptions = body.get("tracuocInput");
     const orderTypeAdd = body.get("orderTypeAdd");
+    const recieverHistoryDisAndWard = body.get("recieverHistoryDisAndWard");
     const productCollectionPrice =
       collectionOptions === "1" ? 0 : body.get("productCollectionPrice");
 
@@ -490,7 +505,8 @@ export async function action({ request, params }) {
               params.orderId,
               dataAction?.data?.data?.ORDER_NUMBER
             );
-            let testData = JSON.parse(recieverHistory);
+            let testData =
+              recieverHistory === "[]" ? [] : JSON.parse(recieverHistory);
 
             const processObject = (inputArray, newObj) => {
               let found = false;
@@ -668,6 +684,30 @@ export async function action({ request, params }) {
           action: "GET_SENDERWARDS",
           data: responseWardS.data,
         };
+      case "GET_RECEIVERHISTORYADDRESS":
+        const responsHisDis = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listDistrict?provinceId=${
+            recieverHistoryDisAndWard.split(",")[0]
+          }`
+        );
+        const responsHiWards = await axios.get(
+          `https://partner.viettelpost.vn/v2/categories/listWards?districtId=${
+            recieverHistoryDisAndWard.split(",")[1]
+          }`
+        );
+        return {
+          action: "GET_RECEIVERHISTORYADDRESS",
+          data: {
+            error: false,
+            disOptions: responsHisDis.data,
+            wardOptions: responsHiWards.data,
+            selected: {
+              provinceId: recieverHistoryDisAndWard.split(",")[0],
+              districtId: recieverHistoryDisAndWard.split(",")[1],
+              wardId: recieverHistoryDisAndWard.split(",")[2],
+            },
+          },
+        };
       default:
         return "no action";
       // break;
@@ -728,10 +768,15 @@ export default function CreateViettelPost() {
   const [recieverHistory, setRecieverHistory] = useState(
     JSON.parse(recieverHistoryString)
   );
+  const [recieverHistoryDisAndWard, setRecieverHistoryDisAndWard] = useState(
+    `${recieverHistory[0]?.provinceId},${recieverHistory[0]?.districtId},${recieverHistory[0]?.wardId}`
+  );
+
   console.log("recieverHistory--->", recieverHistory);
 
   let inventoryList = [];
   const [selectedInventory, setSelectedInventory] = useState("");
+  const [selectedCustomerHistory, setSelectedCustomerHistory] = useState("");
   const [optionsInventory, setOptionsInventory] = useState(inventoryList);
 
   const [senderName, setSenderName] = useState("");
@@ -792,7 +837,11 @@ export default function CreateViettelPost() {
       };
     })
   );
-  const [selectedProvinceReceive, setSelectedProvinceReceive] = useState("1");
+  const [selectedProvinceReceive, setSelectedProvinceReceive] = useState(
+    shopOrdersData?.provinceResponse?.data
+      ?.find((value) => value.PROVINCE_ID == recieverHistory[0]?.provinceId)
+      ?.PROVINCE_ID.toString() || "1"
+  );
 
   // // select v2
   // const deselectedOptions = useMemo(() => optionsProvince, []);
@@ -849,8 +898,18 @@ export default function CreateViettelPost() {
   // );
 
   const [selectedDistrictReceive, setSelectedDistrictReceive] = useState(
-    shopOrdersData?.firstDisList?.data[0]?.DISTRICT_ID.toString()
+    shopOrdersData?.firstDisList?.data
+      ?.find((value) => value.DISTRICT_ID == recieverHistory[0]?.districtId)
+      ?.DISTRICT_ID.toString() ||
+      shopOrdersData?.firstDisList?.data[0]?.DISTRICT_ID.toString()
   );
+  // if (recieverHistory[0]?.districtId) {
+  //   setSelectedDistrictReceive(
+  //     shopOrdersData?.firstDisList?.data
+  //       ?.find((value) => value.DISTRICT_ID === recieverHistory[0].districtId)
+  //       ?.DISTRICT_ID.toString()
+  //   );
+  // }
   const [optionsDistrictReceive, setOptionsDistrictReceive] = useState(
     shopOrdersData?.firstDisList?.data?.map((value) => {
       return {
@@ -860,7 +919,10 @@ export default function CreateViettelPost() {
     })
   );
   const [selectedWardReceive, setSelectedWardReceive] = useState(
-    shopOrdersData?.firstWardList?.data[0]?.WARDS_ID.toString()
+    shopOrdersData?.firstWardList?.data
+      ?.find((value) => value.WARDS_ID == recieverHistory[0]?.wardId)
+      ?.WARDS_ID.toString() ||
+      shopOrdersData?.firstWardList?.data[0]?.WARDS_ID.toString()
   );
   const [optionsWardReceive, setOptionsWardReceive] = useState(
     shopOrdersData?.firstWardList?.data?.map((value) => {
@@ -1156,6 +1218,38 @@ export default function CreateViettelPost() {
               console.log(dataAction.data.message);
             }
             break;
+          case "GET_RECEIVERHISTORYADDRESS":
+            if (!dataAction?.data?.error) {
+              setSelectedProvinceReceive(
+                dataAction?.data?.selected?.provinceId.toString()
+              );
+
+              setOptionsDistrictReceive(
+                dataAction?.data?.disOptions?.data?.map((value) => {
+                  return {
+                    label: capitalizeFirstLetter(value.DISTRICT_NAME),
+                    value: value.DISTRICT_ID.toString(),
+                  };
+                })
+              );
+              setOptionsWardReceive(
+                dataAction?.data?.wardOptions?.data?.map((value) => {
+                  return {
+                    label: capitalizeFirstLetter(value.WARDS_NAME),
+                    value: value.WARDS_ID.toString(),
+                  };
+                })
+              );
+              setSelectedDistrictReceive(
+                dataAction?.data?.selected?.districtId.toString()
+              );
+              setSelectedWardReceive(
+                dataAction?.data?.selected?.wardId.toString()
+              );
+            } else {
+              console.log(dataAction.data.message);
+            }
+            break;
         }
       }
     }
@@ -1198,17 +1292,28 @@ export default function CreateViettelPost() {
   }, []);
 
   const handleSelectChangeInventory = useCallback((value) => {
-    console.log("value: " + recieverHistory[value-1]?.name);
-    setReceiveName(recieverHistory[value-1]?.name)
-    setReceivePhone(recieverHistory[value-1]?.phone);
-    setReceiveEmail(recieverHistory[value-1]?.email);
-    setSelectedProvinceReceive(recieverHistory[value-1]?.provinceId);
-    setSelectedDistrictReceive(recieverHistory[value-1]?.districtId);
-    setSelectedWardReceive(recieverHistory[value-1]?.wardId);
-
     setSelectedInventory(value);
-    console.log("value2: " + receiveName);
+  }, []);
+  const handleSelectChangeCustomerHistory = useCallback((value) => {
+    setSelectedCustomerHistory(value);
 
+    console.log("value: " + recieverHistory[value - 1]?.name);
+    setReceiveName(recieverHistory[value - 1]?.name);
+    setReceivePhone(recieverHistory[value - 1]?.phone);
+    setReceiveEmail(recieverHistory[value - 1]?.email);
+    // setSelectedProvinceReceive(recieverHistory[value - 1]?.provinceId);
+
+    setRecieverHistoryDisAndWard(
+      `${recieverHistory[value - 1]?.provinceId},${
+        recieverHistory[value - 1]?.districtId
+      },${recieverHistory[value - 1]?.wardId}`
+    );
+
+    setActionForm("GET_RECEIVERHISTORYADDRESS");
+    // setSelectedDistrictReceive(recieverHistory[value - 1]?.districtId);
+    // setSelectedWardReceive(recieverHistory[value - 1]?.wardId);
+
+    // console.log("value2: " + value);
   }, []);
 
   const [orders, setOrders] = useState(shopOrdersData.order);
@@ -1371,6 +1476,10 @@ export default function CreateViettelPost() {
                   Lấy danh sách người gửi
                 </Button>
                 <Select
+                  // onFocus={() => {
+                  //   setToken(localStorage.getItem("token") || "");
+                  //   setActionForm("GET_SENDER");
+                  // }}
                   requiredIndicator
                   label=""
                   name="inventory"
@@ -1523,11 +1632,26 @@ export default function CreateViettelPost() {
                   </FormLayout.Group>
                 )}
                 <Divider />
-                <b>NGƯỜI NHẬN:</b>
+                <b>
+                  NGƯỜI NHẬN:{" "}
+                  <Button
+                    plain
+                    monochrome
+                    removeUnderline
+                    icon={SoftPackMajor}
+                    url={`/app/viettel/customer/${
+                      shopOrdersData.order?.customer?.id.split("/")[
+                        shopOrdersData.order?.customer?.id.split("/").length - 1
+                      ]
+                    }`}
+                    size="medium"
+                  ></Button>
+                </b>
+
                 {recieverHistory.length > 0 ? (
-                  <Card>
+                  <>
                     <Text variant="headingMd" as="h6">
-                      <Button
+                      {/* <Button
                         plain
                         textAlign="left"
                         url={`https://admin.shopify.com/store/${
@@ -1543,7 +1667,7 @@ export default function CreateViettelPost() {
                         #View📝
                       </Button>
                       <br />
-                      <br />
+                      <br /> */}
                     </Text>
 
                     <Select
@@ -1557,23 +1681,23 @@ export default function CreateViettelPost() {
                       options={recieverHistory.map((value) => {
                         return {
                           label: `${value.phone}, ${value.name}, ${value?.displayAdress}`,
-                          value: value?.id,
+                          value: value?.id.toString(),
                         };
                       })}
-                      onChange={handleSelectChangeInventory}
-                      value={selectedInventory}
+                      onChange={handleSelectChangeCustomerHistory}
+                      value={selectedCustomerHistory}
                     />
-                  </Card>
+                  </>
                 ) : (
                   <></>
                 )}
                 <input
-                  type="text"
+                  type="hidden"
                   name="recieverHistory"
                   value={recieverHistoryString}
                 />
                 <input
-                  type="text"
+                  type="hidden"
                   name="customerIdRecieverHistory"
                   value={
                     shopOrdersData.order?.customer?.id.split("/")[
@@ -1581,6 +1705,13 @@ export default function CreateViettelPost() {
                     ] || ""
                   }
                 />
+
+                <input
+                  type="hidden"
+                  name="recieverHistoryDisAndWard"
+                  value={recieverHistoryDisAndWard}
+                />
+
                 <FormLayout.Group>
                   <FormLayout.Group>
                     <TextField
@@ -2278,7 +2409,10 @@ export default function CreateViettelPost() {
             </Form>
             {/* <br /> */}
             <br />
-            <Link to="/app">Back to Home page</Link>
+
+            <Button plain monochrome url="/app" icon={CircleChevronLeftMinor}>
+              Trở về trang chủ
+            </Button>
           </Card>
         </Layout.Section>
       </Layout>
