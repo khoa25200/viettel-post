@@ -15,6 +15,7 @@ import {
   Icon,
   Checkbox,
   Banner,
+  DataTable,
 } from "@shopify/polaris";
 import { CircleChevronLeftMinor, SoftPackMajor } from "@shopify/polaris-icons";
 import {
@@ -172,6 +173,7 @@ export async function action({ request, params }) {
     const productMainName = body.get("productMainName");
     const productMainDes = body.get("productMainDes");
     const collectionOptions = body.get("tracuocInput");
+    const allServicesMatch = body.get("allServicesMatch");
     const orderTypeAdd = body.get("orderTypeAdd");
     const recieverHistoryDisAndWard = body.get("recieverHistoryDisAndWard");
     const productCollectionPrice =
@@ -276,7 +278,7 @@ export async function action({ request, params }) {
           const checkPricePayload = {
             PRODUCT_WEIGHT: totalWeight,
             PRODUCT_PRICE: totalPrice,
-            MONEY_COLLECTION: productCollectionPrice,
+            MONEY_COLLECTION: productCollectionPrice || 0,
             ORDER_SERVICE_ADD: orderTypeAdd,
             ORDER_SERVICE: serviceMatch,
             // ORDER_TYPE_ADD: orderTypeAdd,
@@ -290,12 +292,37 @@ export async function action({ request, params }) {
                 : inventory?.provinceId,
             RECEIVER_DISTRICT: receiveDistrict,
             RECEIVER_PROVINCE: receiveProvince,
-            PRODUCT_LENGTH: productLength,
-            PRODUCT_WIDTH: productWidth,
-            PRODUCT_HEIGHT: productHeight,
+            RECEIVER_WARDS: receiveWard,
+            PRODUCT_LENGTH: Number(productLength),
+            PRODUCT_WIDTH: Number(productWidth),
+            PRODUCT_HEIGHT: Number(productHeight),
             PRODUCT_TYPE: valueProductType,
             NATIONAL_TYPE: 1,
           };
+          // const checkPricePayload = {
+          //   PRODUCT_WEIGHT: totalWeight,
+          //   PRODUCT_PRICE: totalPrice,
+          //   MONEY_COLLECTION: productCollectionPrice||0,
+          //   ORDER_SERVICE_ADD: orderTypeAdd,
+          //   ORDER_SERVICE: serviceMatch,
+          //   // ORDER_TYPE_ADD: orderTypeAdd,
+          //   SENDER_DISTRICT:
+          //     inventory === "Nhập thủ công"
+          //       ? senderDistrict
+          //       : inventory?.districtId,
+          //   SENDER_PROVINCE:
+          //     inventory === "Nhập thủ công"
+          //       ? senderProvince
+          //       : inventory?.provinceId,
+          //   RECEIVER_DISTRICT: receiveDistrict,
+          //   RECEIVER_PROVINCE: receiveProvince,
+          //   RECEIVER_WARDS: receiveWard,
+          //   PRODUCT_LENGTH: productLength,
+          //   PRODUCT_WIDTH: productWidth,
+          //   PRODUCT_HEIGHT: productHeight,
+          //   PRODUCT_TYPE: valueProductType,
+          //   NATIONAL_TYPE: 1
+          // };
           const responsePricesEstimate = await axios.post(
             `https://partner.viettelpost.vn/v2/order/getPrice`,
             checkPricePayload,
@@ -310,10 +337,139 @@ export async function action({ request, params }) {
             action: "CHECK_PRICES",
             checkPricePayload: checkPricePayload,
             data: responsePricesEstimate.data,
+            payload: checkPricePayload,
           };
         } catch (error) {
           return {
             action: "CHECK_PRICES",
+            data: {
+              error: true,
+              message: "Requested prices Error!!!",
+            },
+          };
+        }
+      case "CHECK_ALL_PRICES":
+        if (!senderProvince && !inventory?.provinceId) {
+          return {
+            action: "CHECK_ALL_PRICES",
+            data: {
+              error: true,
+              message: "Thiếu Tỉnh/Thành Phố của người nhận",
+            },
+          };
+        }
+        if (!senderDistrict && !inventory?.districtId) {
+          return {
+            action: "CHECK_ALL_PRICES",
+            data: {
+              error: true,
+              message: "Thiếu Quận/Huyện của người nhận",
+            },
+          };
+        }
+        if (!serviceMatch) {
+          return {
+            action: "CHECK_ALL_PRICES",
+            data: {
+              error: true,
+              message: "Chưa chọn dịch vụ cho hành trình",
+            },
+          };
+        }
+        try {
+          const checkPricePayload = {
+            PRODUCT_WEIGHT: totalWeight,
+            PRODUCT_PRICE: totalPrice,
+            MONEY_COLLECTION: productCollectionPrice || 0,
+            ORDER_SERVICE_ADD: orderTypeAdd,
+            ORDER_SERVICE: serviceMatch,
+            SENDER_DISTRICT:
+              inventory === "Nhập thủ công"
+                ? senderDistrict
+                : inventory?.districtId,
+            SENDER_PROVINCE:
+              inventory === "Nhập thủ công"
+                ? senderProvince
+                : inventory?.provinceId,
+            RECEIVER_DISTRICT: receiveDistrict,
+            RECEIVER_PROVINCE: receiveProvince,
+            RECEIVER_WARDS: receiveWard,
+            PRODUCT_LENGTH: Number(productLength),
+            PRODUCT_WIDTH: Number(productWidth),
+            PRODUCT_HEIGHT: Number(productHeight),
+            PRODUCT_TYPE: valueProductType,
+            NATIONAL_TYPE: 1,
+          };
+
+          // const responsePricesEstimate = await axios.post(
+          //   `https://partner.viettelpost.vn/v2/order/getPrice`,
+          //   checkPricePayload,
+          //   {
+          //     headers: {
+          //       "Content-Type": "application/json",
+          //       Token: token,
+          //     },
+          //   }
+          // );
+          let allServicesMatchArr = allServicesMatch.split(",") || [];
+
+          const getAllPricesAxiosAll = await axios
+            .all(
+              allServicesMatchArr?.map((value) => {
+                return axios.post(
+                  `https://partner.viettelpost.vn/v2/order/getPrice`,
+                  {
+                    PRODUCT_WEIGHT: totalWeight,
+                    PRODUCT_PRICE: totalPrice,
+                    MONEY_COLLECTION: productCollectionPrice || 0,
+                    ORDER_SERVICE_ADD: orderTypeAdd,
+                    ORDER_SERVICE: value,
+                    SENDER_DISTRICT:
+                      inventory === "Nhập thủ công"
+                        ? senderDistrict
+                        : inventory?.districtId,
+                    SENDER_PROVINCE:
+                      inventory === "Nhập thủ công"
+                        ? senderProvince
+                        : inventory?.provinceId,
+                    RECEIVER_DISTRICT: receiveDistrict,
+                    RECEIVER_PROVINCE: receiveProvince,
+                    RECEIVER_WARDS: receiveWard,
+                    PRODUCT_LENGTH: Number(productLength),
+                    PRODUCT_WIDTH: Number(productWidth),
+                    PRODUCT_HEIGHT: Number(productHeight),
+                    PRODUCT_TYPE: valueProductType,
+                    NATIONAL_TYPE: 1,
+                  },
+                  {
+                    headers: {
+                      "Content-Type": "application/json",
+                      Token: token,
+                    },
+                  }
+                );
+              })
+            )
+            .then(
+              axios.spread((...responses) => {
+                const responseDataArray = responses.map((res) => res.data);
+                return responseDataArray;
+              })
+            );
+
+          return {
+            action: "CHECK_ALL_PRICES",
+            allServicesMatch: allServicesMatchArr,
+            payload: checkPricePayload,
+            data: {
+              error: false,
+              data: getAllPricesAxiosAll,
+              message: "OK",
+            },
+          };
+        } catch (error) {
+          return {
+            action: "CHECK_ALL_PRICES",
             data: {
               error: true,
               message: "Requested prices Error!!!",
@@ -458,6 +614,7 @@ export async function action({ request, params }) {
           PRODUCT_QUANTITY: totalQuantity,
           PRODUCT_PRICE: totalPrice,
           PRODUCT_WEIGHT: totalWeight,
+          // PRODUCT_WEIGHT: totalWeight,
           PRODUCT_LENGTH: productLength,
           PRODUCT_WIDTH: productWidth,
           PRODUCT_HEIGHT: productHeight,
@@ -749,6 +906,7 @@ export default function CreateViettelPost() {
   const [isLoadingGetSender, setIsLoadingGetSender] = useState(false);
   const [isLoadingCheckServices, setIsLoadingCheckServices] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [isLoadingAllPrices, setIsLoadingAllPrices] = useState(false);
 
   var checkToken = "";
   // if (!checkToken || checkToken == "undefined") {
@@ -813,7 +971,7 @@ export default function CreateViettelPost() {
     shopOrdersData?.order?.customer?.defaultAddress?.address1.split(", ")[0] ||
       ""
   );
-
+  const [allServicesMatch, setAllServicesMatch] = useState("");
   const [selectedProvinceSender, setSelectedProvinceSender] = useState("1");
   const [selectedDistrictSender, setSelectedDistrictSender] = useState(
     shopOrdersData?.firstDisList?.data[0]?.DISTRICT_ID.toString()
@@ -842,7 +1000,7 @@ export default function CreateViettelPost() {
       ?.find((value) => value.PROVINCE_ID == recieverHistory[0]?.provinceId)
       ?.PROVINCE_ID.toString() || "1"
   );
-
+  const [dataAllPrices, setDataAllPrices] = useState([]);
   // // select v2
   // const deselectedOptions = useMemo(() => optionsProvince, []);
   // const [selectedOptions, setSelectedOptions] = useState([]);
@@ -969,7 +1127,7 @@ export default function CreateViettelPost() {
     {
       name: `Hàng theo toa ${shopOrdersData?.order?.name}`,
       quan: 1,
-      weight: 0,
+      weight: 1,
       price: 0,
     },
   ]);
@@ -997,6 +1155,13 @@ export default function CreateViettelPost() {
 
   const [selectedServiceMatch, setSelectedServiceMatch] = useState();
   const [optionsServiceMatch, setOptionsServiceMatch] = useState([]);
+
+  useEffect(() => {
+    if (optionsServiceMatch?.length > 0) {
+      let temp = optionsServiceMatch.map((value) => value?.value);
+      setAllServicesMatch(temp.toString());
+    }
+  }, [optionsServiceMatch]);
   const [optionsServiceMatchTemp, setOptionsServiceMatchTemp] = useState([]);
 
   const [pricesEstimate, setPricesEstimate] = useState({});
@@ -1095,6 +1260,16 @@ export default function CreateViettelPost() {
               alert(dataAction?.data?.message);
             } else {
               setPricesEstimate(dataAction?.data?.data);
+            }
+            break;
+          case "CHECK_ALL_PRICES":
+            setIsLoadingAllPrices(false);
+            if (dataAction?.data?.error) {
+              setIsLoadingAllPrices(false);
+              alert(dataAction?.data?.message);
+            } else {
+              setDataAllPrices(dataAction?.data?.data);
+              console.log("check pricesss=>", dataAllPrices);
             }
             break;
           case "CREATE_ORDER":
@@ -1421,7 +1596,33 @@ export default function CreateViettelPost() {
   //     };
   //   }),
   // });
+  const headings = [
+    "Dịch vụ",
+    "Cước dịch vụ chính",
+    "Thời gian giao hàng dự kiến",
+    "Thu hộ",
+    "Tổng cước",
+  ];
+  // handle weight
+  const [disabledSize, setDisabledSize] = useState(true);
+  useEffect(() => {
+    if (totalWeight < 10000) {
+      setTotalLength("0");
+      setTotalWidth("0");
+      setTotalHeight("0");
+      setDisabledSize(true);
+    } else {
+      setDisabledSize(false);
+    }
+  }, [totalWeight, totalLength, totalWidth, totalHeight]);
+  const formatCurrency = (amount) => {
+    const formatter = new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
 
+    return formatter.format(amount);
+  };
   return (
     <Page>
       <Layout>
@@ -2066,7 +2267,7 @@ export default function CreateViettelPost() {
                           shopOrdersData?.order?.name
                         } (Sản phẩm ${listProductsItem?.length + 1})`,
                         quan: 1,
-                        weight: 0,
+                        weight: 1,
                         price: 0,
                       },
                     ];
@@ -2138,6 +2339,7 @@ export default function CreateViettelPost() {
                     label={<span style={{ fontWeight: "bold" }}>Dài:</span>}
                     placeholder="Dài(cm)"
                     value={totalLength}
+                    disabled={disabledSize}
                     onChange={(value) => {
                       setTotalLength(value);
                     }}
@@ -2149,6 +2351,7 @@ export default function CreateViettelPost() {
                     label={<span style={{ fontWeight: "bold" }}>Rộng:</span>}
                     placeholder="Rộng(cm)"
                     value={totalWidth}
+                    disabled={disabledSize}
                     onChange={(value) => {
                       setTotalWidth(value);
                     }}
@@ -2157,6 +2360,7 @@ export default function CreateViettelPost() {
                   />
                   <TextField
                     requiredIndicator
+                    disabled={disabledSize}
                     label={<span style={{ fontWeight: "bold" }}>Cao:</span>}
                     placeholder="Cao(cm)"
                     value={totalHeight}
@@ -2204,40 +2408,7 @@ export default function CreateViettelPost() {
                   />
                 </FormLayout.Group>
                 <Divider />
-                <Button
-                  primary
-                  submit
-                  size="slim"
-                  loading={isLoadingCheckServices}
-                  onClick={() => {
-                    setIsLoadingCheckServices(true);
-                    setToken(localStorage.getItem("token") || "");
-                    setActionForm("CHECK_SERVICE");
-                  }}
-                >
-                  Kiểm tra dịch vụ phù hợp
-                </Button>
-                <Select
-                  label={
-                    <span style={{ fontWeight: "bold" }}>Dịch Vụ Phù Hợp:</span>
-                  }
-                  options={optionsServiceMatch}
-                  onChange={handleSelectChangeServiceMatch}
-                  value={selectedServiceMatch}
-                  name="serviceMatch"
-                />
-                {/* Dịch vụ thêm */}
-                {selectedServiceMatch && (
-                  <Banner
-                    title={`Thời gian giao hàng: ${
-                      optionsServiceMatchTemp.find(
-                        (value) => value?.MA_DV_CHINH == selectedServiceMatch
-                      )?.THOI_GIAN
-                    }`}
-                    status="info"
-                  />
-                )}
-                <Divider />
+
                 <b>Chọn loại hàng hóa:</b>
                 <Card>
                   <FormLayout.Group>
@@ -2292,8 +2463,97 @@ export default function CreateViettelPost() {
                   value={collectionOptionsFinal}
                 />
                 <Divider />
-
+                <Button
+                  primary
+                  submit
+                  size="slim"
+                  loading={isLoadingCheckServices}
+                  onClick={() => {
+                    setIsLoadingCheckServices(true);
+                    setToken(localStorage.getItem("token") || "");
+                    setActionForm("CHECK_SERVICE");
+                  }}
+                >
+                  Kiểm tra dịch vụ phù hợp
+                </Button>
+                <Select
+                  label={
+                    <span style={{ fontWeight: "bold" }}>Dịch Vụ Phù Hợp:</span>
+                  }
+                  options={optionsServiceMatch}
+                  onChange={handleSelectChangeServiceMatch}
+                  value={selectedServiceMatch}
+                  name="serviceMatch"
+                />
+                {/* Dịch vụ thêm */}
+                {selectedServiceMatch && (
+                  <Banner
+                    title={`Thời gian giao hàng: ${
+                      optionsServiceMatchTemp.find(
+                        (value) => value?.MA_DV_CHINH == selectedServiceMatch
+                      )?.THOI_GIAN
+                    }`}
+                    status="info"
+                  />
+                )}
+                <Divider />
                 <Card roundedAbove="md" background="bg-subdued">
+                  <Button
+                    primary
+                    size="slim"
+                    loading={isLoadingAllPrices}
+                    submit
+                    onClick={() => {
+                      setIsLoadingAllPrices(true);
+                      setToken(localStorage.getItem("token") || "");
+                      setActionForm("CHECK_ALL_PRICES");
+                    }}
+                  >
+                    Kiểm tra tất cả giá
+                  </Button>
+                  <br />
+                  <br />
+                  <input
+                    type="hidden"
+                    value={allServicesMatch}
+                    name="allServicesMatch"
+                  />
+                  {dataAllPrices.length > 0 ? (
+                    <>
+                      <Text variant="headingMd" as="h6">
+                        Chi Phí Ước Tính:
+                      </Text>
+                      <br />
+                      <DataTable
+                      verticalAlign="middle"
+                        columnContentTypes={[
+                          "text",
+                          "numeric",
+                          "numeric",
+                          "numeric",
+                          "numeric",
+                        ]}
+                        headings={headings.map((value) => {
+                          return <b>{value}</b>;
+                        })}
+                        rows={dataAllPrices?.map((value, index) => {
+                          return [
+                            optionsServiceMatch[index]?.label,
+                            formatCurrency(value?.data?.MONEY_TOTAL_FEE),
+                            `${value?.data?.KPI_HT} Giờ`,
+                            formatCurrency(value?.data?.MONEY_COLLECTION_FEE),
+                            <b style={{ color: "red" }}>
+                              {formatCurrency(value?.data?.MONEY_TOTAL)}
+                            </b>,
+                          ];
+                        })}
+                      />
+                    </>
+                  ) : (
+                    <></>
+                  )}
+                </Card>
+                {/* <Card roundedAbove="md" background="bg-subdued">
                   <Button
                     primary
                     size="slim"
@@ -2394,7 +2654,7 @@ export default function CreateViettelPost() {
                       </FormLayout.Group>
                     </>
                   )}
-                </Card>
+                </Card> */}
                 <Button
                   submit
                   destructive
