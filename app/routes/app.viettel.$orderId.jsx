@@ -1623,6 +1623,19 @@ export default function CreateViettelPost() {
 
     return formatter.format(amount);
   };
+  useEffect(() => {
+    if (selectedCollection === "1") {
+      setProductCollectionPrice(0);
+    }
+  }, [selectedCollection]);
+  useEffect(() => {
+    setToken(localStorage.getItem("token") || "");
+    setActionForm("CHECK_SERVICE");
+  }, [productCollectionPrice]);
+  useEffect(() => {
+    setToken(localStorage.getItem("token") || "");
+    setActionForm("CHECK_ALL_PRICES");
+  }, [optionsServiceMatch.length, selectedServiceMatch]);
   return (
     <Page>
       <Layout>
@@ -2518,14 +2531,14 @@ export default function CreateViettelPost() {
                     value={allServicesMatch}
                     name="allServicesMatch"
                   />
-                  {dataAllPrices.length > 0 ? (
+                  {(dataAllPrices.length > 0 &&dataAllPrices.length===optionsServiceMatch.length)? (
                     <>
                       <Text variant="headingMd" as="h6">
                         Chi Phí Ước Tính:
                       </Text>
                       <br />
                       <DataTable
-                      verticalAlign="middle"
+                        verticalAlign="middle"
                         columnContentTypes={[
                           "text",
                           "numeric",
@@ -2538,7 +2551,7 @@ export default function CreateViettelPost() {
                         })}
                         rows={dataAllPrices?.map((value, index) => {
                           return [
-                            optionsServiceMatch[index]?.label,
+                            <div>{optionsServiceMatch[index]?.label}</div>,
                             formatCurrency(value?.data?.MONEY_TOTAL_FEE),
                             `${value?.data?.KPI_HT} Giờ`,
                             formatCurrency(value?.data?.MONEY_COLLECTION_FEE),
